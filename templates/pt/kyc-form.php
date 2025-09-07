@@ -40,8 +40,8 @@ if (!$existing_kyc && $current_user) {
     $form_data->post_code = $current_user->zipcode;
 }
 
-// Determine account type based on affiliate_type field for KYC
-$is_individual = strtolower($current_user->affiliate_type) !== 'company';
+// Determine account type based on type field for KYC (Individual vs Company)
+$is_individual = strtolower($current_user->type ?? '') !== 'company';
 ?>
 
 <style>
@@ -326,6 +326,20 @@ $is_individual = strtolower($current_user->affiliate_type) !== 'company';
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <h2>Complete sua Verificação KYC</h2>
+    </div>
+    
+    <!-- Account Type Display -->
+    <div class="kyc-account-type-display" style="margin-bottom: 25px; text-align: center;">
+        <div class="account-type-badge <?php echo $is_individual ? 'individual' : 'company'; ?>" style="display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 25px; font-size: 1rem; font-weight: 500; border: 2px solid; <?php echo $is_individual ? 'background: linear-gradient(135deg, #e3f2fd, #bbdefb); color: #1565c0; border-color: #2196f3;' : 'background: linear-gradient(135deg, #f3e5f5, #e1bee7); color: #7b1fa2; border-color: #9c27b0;'; ?>">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <?php if ($is_individual): ?>
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <?php else: ?>
+                    <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
+                <?php endif; ?>
+            </svg>
+            <span>Tipo de Conta: <strong><?php echo $is_individual ? 'Individual' : 'Empresa'; ?></strong></span>
+        </div>
     </div>
 
     <!-- Status Indicator -->

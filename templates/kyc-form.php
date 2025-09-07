@@ -40,8 +40,8 @@ if (!$existing_kyc && $current_user) {
     $form_data->post_code = $current_user->zipcode;
 }
 
-// Determine account type based on affiliate_type field for KYC
-$is_individual = strtolower($current_user->affiliate_type) !== 'company';
+// Determine account type based on type field for KYC (Individual vs Company)
+$is_individual = strtolower($current_user->type ?? '') !== 'company';
 ?>
 
 <style>

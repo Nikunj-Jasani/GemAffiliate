@@ -98,6 +98,10 @@ class AffiliatePortal {
         add_action('wp_ajax_affiliate_update_kyc_status', array($this, 'update_kyc_status'));
         add_action('wp_ajax_nopriv_affiliate_update_kyc_status', array($this, 'update_kyc_status'));
         
+        // Enhanced KYC verification system
+        add_action('wp_ajax_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
+        add_action('wp_ajax_nopriv_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
+        
         // Create pages on activation and version updates
         add_action('wp_loaded', array($this, 'maybe_update_pages'));
         
@@ -4228,6 +4232,274 @@ Submitted on: " . current_time('F j, Y \a\t g:i A') . "
         wp_send_json_success('KYC status updated successfully');
     }
     
+    // Get comprehensive KYC verification details for admin review
+    public function get_kyc_verification_details() {
+        // Check admin authentication
+        if (!$this->is_admin_logged_in()) {
+            wp_send_json_error('Access denied');
+            return;
+        }
+        
+        if (!isset($_POST['user_id'])) {
+            wp_send_json_error('User ID is required');
+            return;
+        }
+        
+        global $wpdb;
+        $user_id = intval($_POST['user_id']);
+        
+        // Get user data
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        $user = $wpdb->get_row($wpdb->prepare("SELECT * FROM $users_table WHERE id = %d", $user_id));
+        $kyc_data = $wpdb->get_row($wpdb->prepare("SELECT * FROM $kyc_table WHERE user_id = %d", $user_id));
+        
+        if (!$user) {
+            wp_send_json_error('User not found');
+            return;
+        }
+        
+        // Determine if user is individual or company
+        $is_individual = strtolower($user->type ?? '') !== 'company';
+        
+        // Build comprehensive KYC verification HTML
+        $html = $this->build_kyc_verification_html($user, $kyc_data, $is_individual);
+        
+        wp_send_json_success(array('html' => $html));
+    }
+    
+    private function build_kyc_verification_html($user, $kyc_data, $is_individual) {
+        $avatar_initial = strtoupper(substr($user->first_name ?? $user->username, 0, 1));
+        $kyc_status = $kyc_data->kyc_status ?? 'not_submitted';
+        $account_type = $is_individual ? 'Individual' : 'Company';
+        
+        $html = '<div class="kyc-verification-content">';
+        
+        // User Info Header
+        $html .= '<div class="kyc-user-info">';
+        $html .= '<div class="kyc-user-header">';
+        $html .= '<div class="kyc-user-avatar">' . $avatar_initial . '</div>';
+        $html .= '<div class="kyc-user-details">';
+        $html .= '<h3>' . esc_html($user->first_name . ' ' . $user->last_name) . '</h3>';
+        $html .= '<p>' . esc_html($user->email) . ' • ' . esc_html($account_type) . ' Account</p>';
+        $html .= '</div>';
+        $html .= '<div class="kyc-status-badge kyc-status-' . esc_attr($kyc_status) . '">';
+        $html .= '<span>' . ucfirst(str_replace('_', ' ', $kyc_status)) . '</span>';
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        // KYC Sections
+        $html .= '<div class="kyc-sections">';
+        
+        if ($is_individual) {
+            $html .= $this->build_individual_kyc_section($user, $kyc_data);
+        } else {
+            $html .= $this->build_company_kyc_section($user, $kyc_data);
+        }
+        
+        // Documents Section
+        $html .= $this->build_documents_section($kyc_data);
+        
+        $html .= '</div>';
+        
+        // Admin Actions Section
+        $html .= $this->build_admin_actions_section($user->id, $kyc_data);
+        
+        $html .= '</div>';
+        
+        return $html;
+    }
+    
+    private function build_individual_kyc_section($user, $kyc_data) {
+        $html = '<div class="kyc-section">';
+        $html .= '<div class="kyc-section-header">';
+        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>';
+        $html .= '</svg>';
+        $html .= '<h4>Individual Information</h4>';
+        $html .= '</div>';
+        
+        $html .= '<div class="kyc-form-grid">';
+        $html .= $this->render_kyc_field('Full Name', $kyc_data->full_name ?? $user->first_name . ' ' . $user->last_name);
+        $html .= $this->render_kyc_field('Date of Birth', $kyc_data->date_of_birth ?? $user->dob);
+        $html .= $this->render_kyc_field('Email', $kyc_data->email ?? $user->email);
+        $html .= $this->render_kyc_field('Mobile Number', $kyc_data->mobile_number ?? $user->mobile_number);
+        $html .= $this->render_kyc_field('Nationality', $kyc_data->nationality ?? 'Not provided');
+        $html .= $this->render_kyc_field('Affiliate Type', $kyc_data->affiliate_type ?? $user->affiliate_type);
+        $html .= $this->render_kyc_field('Address Line 1', $kyc_data->address_line1 ?? $user->address_line1);
+        $html .= $this->render_kyc_field('Address Line 2', $kyc_data->address_line2 ?? $user->address_line2);
+        $html .= $this->render_kyc_field('City', $kyc_data->city ?? $user->city);
+        $html .= $this->render_kyc_field('Country', $kyc_data->country ?? $user->country);
+        $html .= $this->render_kyc_field('Post Code', $kyc_data->post_code ?? $user->zipcode);
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+    
+    private function build_company_kyc_section($user, $kyc_data) {
+        $html = '<div class="kyc-section">';
+        $html .= '<div class="kyc-section-header">';
+        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>';
+        $html .= '</svg>';
+        $html .= '<h4>Company Information</h4>';
+        $html .= '</div>';
+        
+        $html .= '<div class="kyc-form-grid">';
+        $html .= $this->render_kyc_field('Company Name', $kyc_data->company_name ?? $user->company_name);
+        $html .= $this->render_kyc_field('Business Registration Number', $kyc_data->business_registration_number ?? 'Not provided');
+        $html .= $this->render_kyc_field('Business Contact Name', $kyc_data->business_contact_name ?? 'Not provided');
+        $html .= $this->render_kyc_field('Business Email', $kyc_data->business_email ?? $user->email);
+        $html .= $this->render_kyc_field('Business Phone', $kyc_data->business_phone ?? $user->mobile_number);
+        $html .= $this->render_kyc_field('Business Address', $kyc_data->business_address ?? $user->address_line1);
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+    
+    private function build_documents_section($kyc_data) {
+        $html = '<div class="kyc-section">';
+        $html .= '<div class="kyc-section-header">';
+        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>';
+        $html .= '<polyline points="14,2 14,8 20,8"/>';
+        $html .= '</svg>';
+        $html .= '<h4>Uploaded Documents</h4>';
+        $html .= '</div>';
+        
+        $html .= '<div class="kyc-documents-grid">';
+        
+        // Address Proof
+        if (!empty($kyc_data->address_proof_url)) {
+            $html .= $this->render_document_card('Address Proof', $kyc_data->address_proof_url);
+        }
+        
+        // Identity Document
+        if (!empty($kyc_data->identity_document_url)) {
+            $html .= $this->render_document_card('Identity Document', $kyc_data->identity_document_url);
+        }
+        
+        // Bank Statement
+        if (!empty($kyc_data->bank_statement_url)) {
+            $html .= $this->render_document_card('Bank Statement', $kyc_data->bank_statement_url);
+        }
+        
+        // Selfie
+        if (!empty($kyc_data->selfie_url)) {
+            $html .= $this->render_document_card('Selfie', $kyc_data->selfie_url);
+        }
+        
+        // Passport
+        if (!empty($kyc_data->passport_url)) {
+            $html .= $this->render_document_card('Passport', $kyc_data->passport_url);
+        }
+        
+        // Company Registration Certificate
+        if (!empty($kyc_data->company_registration_certificate_url)) {
+            $html .= $this->render_document_card('Company Registration Certificate', $kyc_data->company_registration_certificate_url);
+        }
+        
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+    
+    private function render_document_card($title, $url) {
+        $is_image = preg_match('/\.(jpg|jpeg|png|gif)$/i', $url);
+        
+        $html = '<div class="kyc-document">';
+        $html .= '<div class="kyc-document-header">';
+        $html .= '<h5 class="kyc-document-title">' . esc_html($title) . '</h5>';
+        $html .= '</div>';
+        $html .= '<div class="kyc-document-content">';
+        
+        if ($is_image) {
+            $html .= '<img src="' . esc_url($url) . '" alt="' . esc_attr($title) . '" class="kyc-document-preview">';
+        } else {
+            $html .= '<div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">';
+            $html .= '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d; margin-bottom: 10px;">';
+            $html .= '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>';
+            $html .= '<polyline points="14,2 14,8 20,8"/>';
+            $html .= '</svg>';
+            $html .= '<p style="margin: 0; color: #6c757d;">Document File</p>';
+            $html .= '</div>';
+        }
+        
+        $html .= '<div class="kyc-document-actions">';
+        $html .= '<button type="button" class="kyc-doc-btn kyc-doc-btn-view" onclick="viewDocumentInModal(\'' . esc_url($url) . '\', \'' . esc_attr($title) . '\')">';
+        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+        $html .= '</svg>';
+        $html .= 'View';
+        $html .= '</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+    
+    private function render_kyc_field($label, $value) {
+        return '<div class="kyc-field">' .
+               '<div class="kyc-field-label">' . esc_html($label) . '</div>' .
+               '<div class="kyc-field-value">' . esc_html($value ?: 'Not provided') . '</div>' .
+               '</div>';
+    }
+    
+    private function build_admin_actions_section($user_id, $kyc_data) {
+        $html = '<div class="kyc-admin-actions">';
+        $html .= '<h4>Admin Actions</h4>';
+        
+        // Previous Comments Section
+        if (!empty($kyc_data->admin_comments)) {
+            $html .= '<div class="kyc-previous-comments">';
+            $html .= '<h5>Previous Admin Comments</h5>';
+            $html .= '<div class="kyc-comment-item">';
+            $html .= '<div class="kyc-comment-meta">Previous Review</div>';
+            $html .= '<div class="kyc-comment-text">' . esc_html($kyc_data->admin_comments) . '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+        
+        // Comment Section
+        $html .= '<div class="kyc-comment-section">';
+        $html .= '<label for="kycAdminComments">Admin Comments</label>';
+        $html .= '<textarea id="kycAdminComments" class="kyc-comment-textarea" placeholder="Enter your comments for the user. This will be included in the email notification.">' . esc_textarea($kyc_data->admin_comments ?? '') . '</textarea>';
+        $html .= '</div>';
+        
+        // Action Buttons
+        $html .= '<div class="kyc-status-actions">';
+        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-approve" onclick="approveKyc(' . $user_id . ')">';
+        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>';
+        $html .= '</svg>';
+        $html .= 'Approve KYC';
+        $html .= '</button>';
+        
+        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-reject" onclick="rejectKyc(' . $user_id . ')">';
+        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>';
+        $html .= '</svg>';
+        $html .= 'Reject KYC';
+        $html .= '</button>';
+        
+        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-info" onclick="requestMoreInfo(' . $user_id . ')">';
+        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
+        $html .= '<path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"/>';
+        $html .= '</svg>';
+        $html .= 'Request More Info';
+        $html .= '</button>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+
     private function send_kyc_status_notification($user, $status, $admin_comments) {
         $subject = 'KYC Application Status Update - GEM AFFILIATE';
         

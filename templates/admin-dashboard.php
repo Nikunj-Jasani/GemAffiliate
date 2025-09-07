@@ -308,6 +308,24 @@ if (!$admin_data) {
     </div>
 </div>
 
+<!-- KYC Verification Modal -->
+<div id="kycVerificationModal" class="modal kyc-modal" style="display: none;">
+    <div class="modal-content kyc-modal-content">
+        <div class="modal-header">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                KYC Verification & Document Review
+            </h3>
+            <button type="button" class="modal-close" onclick="hideKycModal()">&times;</button>
+        </div>
+        <div class="modal-body kyc-modal-body">
+            <div id="kycVerificationContent">Loading KYC details...</div>
+        </div>
+    </div>
+</div>
+
 <!-- Status Update Modal -->
 <div id="statusUpdateModal" class="modal" style="display: none;">
     <div class="modal-content">
@@ -1720,4 +1738,395 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// KYC Verification Functions
+function showKycVerification(userId) {
+    const modal = document.getElementById('kycVerificationModal');
+    const content = document.getElementById('kycVerificationContent');
+    
+    if (!modal || !content) return;
+    
+    content.innerHTML = 'Loading KYC details...';
+    modal.style.display = 'flex';
+    
+    // Fetch KYC details
+    const formData = new FormData();
+    formData.append('action', 'affiliate_get_kyc_verification_details');
+    formData.append('user_id', userId);
+    formData.append('nonce', affiliate_ajax.nonce);
+    
+    fetch(affiliate_ajax.ajax_url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            content.innerHTML = data.data.html;
+        } else {
+            content.innerHTML = '<div class="error">Failed to load KYC details: ' + data.data + '</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading KYC details:', error);
+        content.innerHTML = '<div class="error">Error loading KYC details</div>';
+    });
+}
+
+function hideKycModal() {
+    const modal = document.getElementById('kycVerificationModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function updateKycStatus(userId, status, comments) {
+    const formData = new FormData();
+    formData.append('action', 'affiliate_update_kyc_status');
+    formData.append('user_id', userId);
+    formData.append('kyc_status', status);
+    formData.append('admin_comments', comments);
+    formData.append('nonce', affiliate_ajax.nonce);
+    
+    fetch(affiliate_ajax.ajax_url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('KYC status updated successfully. Email notification sent to user.');
+            hideKycModal();
+            loadApplications(); // Refresh the main applications table
+        } else {
+            alert('Failed to update KYC status: ' + data.data);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating KYC status:', error);
+        alert('Error updating KYC status');
+    });
+}
+
+function approveKyc(userId) {
+    const comments = document.getElementById('kycAdminComments')?.value || '';
+    if (confirm('Are you sure you want to approve this KYC application?')) {
+        updateKycStatus(userId, 'approved', comments);
+    }
+}
+
+function rejectKyc(userId) {
+    const comments = document.getElementById('kycAdminComments')?.value || '';
+    if (!comments.trim()) {
+        alert('Please provide rejection comments for the user.');
+        return;
+    }
+    if (confirm('Are you sure you want to reject this KYC application?')) {
+        updateKycStatus(userId, 'rejected', comments);
+    }
+}
+
+function requestMoreInfo(userId) {
+    const comments = document.getElementById('kycAdminComments')?.value || '';
+    if (!comments.trim()) {
+        alert('Please provide comments explaining what additional information is needed.');
+        return;
+    }
+    if (confirm('This will request additional information from the user.')) {
+        updateKycStatus(userId, 'incomplete', comments);
+    }
+}
+
+function viewDocumentInModal(url, title) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 90%; max-height: 90%;">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button type="button" class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px; text-align: center;">
+                ${url.toLowerCase().endsWith('.pdf') 
+                    ? `<iframe src="${url}" style="width: 100%; height: 70vh; border: none;"></iframe>`
+                    : `<img src="${url}" style="max-width: 100%; max-height: 70vh; object-fit: contain;" alt="${title}">`
+                }
+                <div style="margin-top: 15px;">
+                    <a href="${url}" target="_blank" class="affiliate-btn affiliate-btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Open in New Tab
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
 </script>
+
+<style>
+/* KYC Modal Styles */
+.kyc-modal .modal-content {
+    max-width: 1200px !important;
+    width: 95% !important;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.kyc-modal-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.kyc-user-info {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border: 2px solid #dee2e6;
+}
+
+.kyc-user-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.kyc-user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #6610f2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.kyc-user-details h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.4rem;
+}
+
+.kyc-user-details p {
+    margin: 5px 0 0 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.kyc-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kyc-status-pending { background: #fff3cd; color: #856404; border: 2px solid #ffc107; }
+.kyc-status-approved { background: #d1edff; color: #0c5460; border: 2px solid #17a2b8; }
+.kyc-status-rejected { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+.kyc-status-incomplete { background: #fff3cd; color: #856404; border: 2px solid #fd7e14; }
+
+.kyc-sections { display: grid; gap: 25px; }
+
+.kyc-section {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    border: 2px solid #e9ecef;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.kyc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.kyc-section-header h4 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.kyc-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.kyc-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.kyc-field-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.kyc-field-value {
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.kyc-documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.kyc-document {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+}
+
+.kyc-document-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.kyc-document-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.kyc-document-content { padding: 20px; }
+
+.kyc-document-preview {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.kyc-document-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.kyc-doc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.kyc-doc-btn-view { background: #0d6efd; color: white; }
+.kyc-doc-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+
+.kyc-admin-actions {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 25px;
+    border: 2px solid #dee2e6;
+}
+
+.kyc-admin-actions h4 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.kyc-comment-section { margin-bottom: 20px; }
+
+.kyc-comment-section label {
+    display: block;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.kyc-comment-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.kyc-comment-textarea:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.kyc-status-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.kyc-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    min-height: 48px;
+}
+
+.kyc-action-btn-approve { background: linear-gradient(135deg, #198754, #20c997); color: white; }
+.kyc-action-btn-reject { background: linear-gradient(135deg, #dc3545, #fd7e14); color: white; }
+.kyc-action-btn-info { background: linear-gradient(135deg, #fd7e14, #ffc107); color: white; }
+
+.kyc-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .kyc-modal .modal-content { width: 98% !important; margin: 10px; }
+    .kyc-form-grid { grid-template-columns: 1fr; }
+    .kyc-documents-grid { grid-template-columns: 1fr; }
+    .kyc-status-actions { flex-direction: column; align-items: stretch; }
+}
+</style>
