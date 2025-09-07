@@ -42,6 +42,7 @@ if (!$existing_kyc && $current_user) {
 
 // Determine account type based on type field for KYC (Individual vs Company)
 $is_individual = strtolower($current_user->type ?? '') !== 'company';
+
 ?>
 
 <style>
@@ -763,6 +764,55 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                     <button type="button" class="add-director-btn" onclick="addDirector()">+ Add Director</button>
                 </div>
                 
+                <!-- Director Documents Section -->
+                <div class="director-documents-section">
+                    <h4>Director ID Documents</h4>
+                    <p style="color: #6c757d; font-size: 14px; margin-bottom: 20px;">Each director must upload their identification document (passport, driver's license, or national ID).</p>
+                    <div id="director-documents-container">
+                        <?php 
+                        $directors = $form_data->list_of_directors ?? '';
+                        if ($directors) {
+                            $directors_array = json_decode($directors, true) ?: [];
+                            foreach ($directors_array as $index => $director) {
+                                echo '<div class="director-document-item" data-director-index="' . $index . '">
+                                        <div class="director-document-header">
+                                            <strong>' . esc_attr($director['name'] ?? 'Director ' . ($index + 1)) . '</strong> - ' . esc_attr($director['position'] ?? 'Position') . '
+                                        </div>
+                                        <div class="kyc-document-upload" onclick="document.getElementById(\'director_doc_' . $index . '\').click()">
+                                            <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                <polyline points="14,2 14,8 20,8"/>
+                                            </svg>
+                                            <div class="kyc-upload-text">Upload ID Document</div>
+                                            <div class="kyc-upload-subtext">Passport, Driver\'s License, National ID</div>
+                                        </div>
+                                        <input type="file" id="director_doc_' . $index . '" name="director_documents[' . $index . ']" style="display: none;" 
+                                               accept=".pdf,.jpg,.jpeg,.png" required>
+                                        <div id="director_doc_' . $index . '_preview"></div>
+                                      </div>';
+                            }
+                        } else {
+                            echo '<div class="director-document-item" data-director-index="0">
+                                    <div class="director-document-header">
+                                        <strong>Director 1</strong> - Position
+                                    </div>
+                                    <div class="kyc-document-upload" onclick="document.getElementById(\'director_doc_0\').click()">
+                                        <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14,2 14,8 20,8"/>
+                                        </svg>
+                                        <div class="kyc-upload-text">Upload ID Document</div>
+                                        <div class="kyc-upload-subtext">Passport, Driver\'s License, National ID</div>
+                                    </div>
+                                    <input type="file" id="director_doc_0" name="director_documents[0]" style="display: none;" 
+                                           accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <div id="director_doc_0_preview"></div>
+                                  </div>';
+                        }
+                        ?>
+                    </div>
+                </div>
+                
                 <div class="shareholders-list">
                     <h4>List of Shareholders and Holding Percentage</h4>
                     <div id="shareholders-container">
@@ -897,6 +947,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Submit form functionality
     kycForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Validate form before submission
+        if (!validateKYCForm()) {
+            return;
+        }
+        
         submitForm('submitted');
     });
 
@@ -1030,6 +1086,76 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.remove();
         }, 5000);
     }
+    
+    // Form validation function
+    function validateKYCForm() {
+        const form = document.getElementById('kycForm');
+        const accountType = form.querySelector('input[name="account_type"]').value;
+        let isValid = true;
+        let errors = [];
+        
+        // Email validation
+        const emails = form.querySelectorAll('input[type="email"]');
+        emails.forEach(email => {
+            if (email.value && !isValidEmail(email.value)) {
+                isValid = false;
+                email.style.borderColor = '#dc3545';
+                errors.push(`Invalid email format: ${email.value}`);
+            } else {
+                email.style.borderColor = '';
+            }
+        });
+        
+        // Phone number validation
+        const phones = form.querySelectorAll('input[type="tel"]');
+        phones.forEach(phone => {
+            if (phone.value && !isValidPhone(phone.value)) {
+                isValid = false;
+                phone.style.borderColor = '#dc3545';
+                errors.push(`Invalid phone number format: ${phone.value}`);
+            } else {
+                phone.style.borderColor = '';
+            }
+        });
+        
+        // Company-specific validation
+        if (accountType === 'Company') {
+            // Validate shareholders percentage totals
+            const shareholderPercentages = form.querySelectorAll('input[name*="shareholders"][name*="percentage"]');
+            let totalPercentage = 0;
+            shareholderPercentages.forEach(input => {
+                if (input.value) {
+                    totalPercentage += parseFloat(input.value) || 0;
+                }
+            });
+            
+            if (totalPercentage > 100) {
+                isValid = false;
+                shareholderPercentages.forEach(input => input.style.borderColor = '#dc3545');
+                errors.push('Total shareholder percentage cannot exceed 100%');
+            } else {
+                shareholderPercentages.forEach(input => input.style.borderColor = '');
+            }
+        }
+        
+        // Show validation errors
+        if (!isValid) {
+            showNotification('Please fix the following errors:\n• ' + errors.join('\n• '), 'error');
+        }
+        
+        return isValid;
+    }
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    function isValidPhone(phone) {
+        // Allow various phone formats with country codes
+        const phoneRegex = /^[+]?[\d\s\-\(\)]+$/;
+        return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
+    }
 });
 
 // Directors and Shareholders Management Functions
@@ -1038,21 +1164,73 @@ let shareholderCount = <?php echo count(json_decode($form_data->list_of_sharehol
 
 function addDirector() {
     const container = document.getElementById('directors-container');
+    const docContainer = document.getElementById('director-documents-container');
+    
+    // Add director form fields
     const directorItem = document.createElement('div');
     directorItem.className = 'director-item';
     directorItem.innerHTML = `
-        <input type="text" name="directors[${directorCount}][name]" placeholder="Director Name" required>
-        <input type="text" name="directors[${directorCount}][position]" placeholder="Position" required>
+        <input type="text" name="directors[${directorCount}][name]" placeholder="Director Name" required onchange="updateDirectorDocumentLabel(${directorCount})">
+        <input type="text" name="directors[${directorCount}][position]" placeholder="Position" required onchange="updateDirectorDocumentLabel(${directorCount})">
         <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
     `;
     container.appendChild(directorItem);
+    
+    // Add director document upload
+    const docItem = document.createElement('div');
+    docItem.className = 'director-document-item';
+    docItem.setAttribute('data-director-index', directorCount);
+    docItem.innerHTML = `
+        <div class="director-document-header">
+            <strong>Director ${directorCount + 1}</strong> - Position
+        </div>
+        <div class="kyc-document-upload" onclick="document.getElementById('director_doc_${directorCount}').click()">
+            <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+            </svg>
+            <div class="kyc-upload-text">Upload ID Document</div>
+            <div class="kyc-upload-subtext">Passport, Driver's License, National ID</div>
+        </div>
+        <input type="file" id="director_doc_${directorCount}" name="director_documents[${directorCount}]" style="display: none;" 
+               accept=".pdf,.jpg,.jpeg,.png" required>
+        <div id="director_doc_${directorCount}_preview"></div>
+    `;
+    docContainer.appendChild(docItem);
+    
     directorCount++;
+}
+
+function updateDirectorDocumentLabel(index) {
+    const nameInput = document.querySelector(`input[name="directors[${index}][name]"]`);
+    const positionInput = document.querySelector(`input[name="directors[${index}][position]"]`);
+    const docHeader = document.querySelector(`[data-director-index="${index}"] .director-document-header strong`);
+    
+    if (nameInput && positionInput && docHeader) {
+        const name = nameInput.value || `Director ${index + 1}`;
+        const position = positionInput.value || 'Position';
+        docHeader.nextSibling.textContent = ` - ${position}`;
+        docHeader.textContent = name;
+    }
 }
 
 function removeDirector(button) {
     const container = document.getElementById('directors-container');
+    const docContainer = document.getElementById('director-documents-container');
+    
     if (container.children.length > 1) {
+        // Find the index of the director being removed
+        const directorItems = Array.from(container.children);
+        const itemIndex = directorItems.indexOf(button.parentElement);
+        
+        // Remove the director form fields
         button.parentElement.remove();
+        
+        // Remove corresponding document upload
+        const docItems = docContainer.children;
+        if (docItems[itemIndex]) {
+            docItems[itemIndex].remove();
+        }
     } else {
         alert('At least one director is required for company accounts.');
     }

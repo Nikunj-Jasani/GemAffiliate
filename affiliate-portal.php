@@ -514,9 +514,12 @@ class AffiliatePortal {
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 user_id mediumint(9) NOT NULL,
                 account_type varchar(20) NOT NULL,
+                
+                -- Individual fields
                 full_name varchar(200) DEFAULT '',
                 date_of_birth date NULL,
                 email varchar(120) DEFAULT '',
+                nationality varchar(100) DEFAULT '',
                 mobile_number varchar(20) DEFAULT '',
                 affiliate_type varchar(50) DEFAULT '',
                 address_line1 varchar(255) DEFAULT '',
@@ -525,29 +528,57 @@ class AffiliatePortal {
                 country varchar(100) DEFAULT '',
                 post_code varchar(20) DEFAULT '',
                 
+                -- Company contact fields
+                business_contact_name varchar(200) DEFAULT '',
+                job_title varchar(100) DEFAULT '',
+                business_email varchar(120) DEFAULT '',
+                business_telephone varchar(20) DEFAULT '',
+                
+                -- Company details
+                full_company_name varchar(200) DEFAULT '',
+                trading_name varchar(200) DEFAULT '',
+                type_of_business varchar(100) DEFAULT '',
+                company_registration_no varchar(100) DEFAULT '',
+                company_email varchar(120) DEFAULT '',
+                company_telephone varchar(20) DEFAULT '',
+                company_address_line1 varchar(255) DEFAULT '',
+                company_address_line2 varchar(255) DEFAULT '',
+                company_city varchar(100) DEFAULT '',
+                company_country varchar(100) DEFAULT '',
+                company_post_code varchar(20) DEFAULT '',
+                
+                -- Affiliate sites
+                affiliate_sites text,
+                
+                -- Document URLs
                 identity_document_type varchar(50) DEFAULT '',
                 identity_document_number varchar(100) DEFAULT '',
                 identity_document_expiry date NULL,
                 identity_document_url text,
-                
                 address_proof_type varchar(50) DEFAULT '',
                 address_proof_url text,
-                
                 bank_statement_url text,
-                
                 selfie_url text,
                 passport_url text,
-                
                 company_registration_certificate_url text,
+                company_address_proof_url text,
+                business_license_url text,
+                directors_id_docs_url text,
+                
+                -- Company specific
                 company_type varchar(100) DEFAULT '',
                 registration_number varchar(100) DEFAULT '',
                 tax_id varchar(100) DEFAULT '',
                 incorporation_date date NULL,
-                business_license_url text,
                 
-                directors_list text,
-                shareholdings text,
+                -- Directors and shareholders (JSON)
+                list_of_directors text,
+                list_of_shareholders text,
                 
+                -- Director documents (JSON - each director can have separate docs)
+                director_documents text,
+                
+                -- Status and admin
                 kyc_status varchar(50) DEFAULT 'draft',
                 admin_notes text,
                 submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -3643,24 +3674,81 @@ class AffiliatePortal {
             'submitted_at' => current_time('mysql')
         );
 
-        // Handle basic form fields from KYC forms
-        if (isset($_POST['full_name'])) {
-            $kyc_data['full_name'] = sanitize_text_field($_POST['full_name']);
+        // Handle individual form fields
+        $individual_fields = ['full_name', 'date_of_birth', 'email', 'nationality', 'mobile_number', 'affiliate_type', 
+                             'address_line1', 'address_line2', 'city', 'country', 'post_code'];
+        
+        foreach ($individual_fields as $field) {
+            if (isset($_POST[$field])) {
+                if ($field === 'email') {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
         }
-        if (isset($_POST['date_of_birth'])) {
-            $kyc_data['date_of_birth'] = sanitize_text_field($_POST['date_of_birth']);
+        
+        // Handle company contact fields
+        $company_contact_fields = ['business_contact_name', 'job_title', 'business_email', 'business_telephone'];
+        
+        foreach ($company_contact_fields as $field) {
+            if (isset($_POST[$field])) {
+                if ($field === 'business_email') {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
         }
-        if (isset($_POST['email'])) {
-            $kyc_data['email'] = sanitize_email($_POST['email']);
+        
+        // Handle company detail fields  
+        $company_fields = ['full_company_name', 'trading_name', 'company_type', 'type_of_business', 
+                          'company_registration_no', 'company_email', 'company_telephone',
+                          'company_address_line1', 'company_address_line2', 'company_city', 
+                          'company_country', 'company_post_code'];
+        
+        foreach ($company_fields as $field) {
+            if (isset($_POST[$field])) {
+                if ($field === 'company_email') {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
         }
-        if (isset($_POST['nationality'])) {
-            $kyc_data['nationality'] = sanitize_text_field($_POST['nationality']);
+        
+        // Handle affiliate sites
+        if (isset($_POST['affiliate_sites'])) {
+            $kyc_data['affiliate_sites'] = sanitize_textarea_field($_POST['affiliate_sites']);
         }
-        if (isset($_POST['mobile_number'])) {
-            $kyc_data['mobile_number'] = sanitize_text_field($_POST['mobile_number']);
+        
+        // Handle directors list (JSON)
+        if (isset($_POST['directors']) && is_array($_POST['directors'])) {
+            $directors = [];
+            foreach ($_POST['directors'] as $director) {
+                if (isset($director['name']) && isset($director['position'])) {
+                    $directors[] = [
+                        'name' => sanitize_text_field($director['name']),
+                        'position' => sanitize_text_field($director['position'])
+                    ];
+                }
+            }
+            $kyc_data['list_of_directors'] = json_encode($directors);
         }
-        if (isset($_POST['affiliate_type'])) {
-            $kyc_data['affiliate_type'] = sanitize_text_field($_POST['affiliate_type']);
+        
+        // Handle shareholders list (JSON)
+        if (isset($_POST['shareholders']) && is_array($_POST['shareholders'])) {
+            $shareholders = [];
+            foreach ($_POST['shareholders'] as $shareholder) {
+                if (isset($shareholder['name']) && isset($shareholder['percentage'])) {
+                    $shareholders[] = [
+                        'name' => sanitize_text_field($shareholder['name']),
+                        'percentage' => floatval($shareholder['percentage'])
+                    ];
+                }
+            }
+            $kyc_data['list_of_shareholders'] = json_encode($shareholders);
+        }
         }
         if (isset($_POST['address_line1'])) {
             $kyc_data['address_line1'] = sanitize_text_field($_POST['address_line1']);

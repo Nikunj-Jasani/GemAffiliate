@@ -42,6 +42,7 @@ if (!$existing_kyc && $current_user) {
 
 // Determine account type based on type field for KYC (Individual vs Company)
 $is_individual = strtolower($current_user->type ?? '') !== 'company';
+
 ?>
 
 <style>
@@ -500,9 +501,36 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
             
             <div class="kyc-form-grid">
                 <div class="kyc-form-group">
-                    <label class="kyc-form-label required" for="company_name">Nome da Empresa</label>
-                    <input type="text" id="company_name" name="company_name" class="kyc-form-input" 
-                           value="<?php echo esc_attr($form_data->company_name ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
+                    <label class="kyc-form-label required" for="business_contact_name">Nome do Contato Comercial</label>
+                    <input type="text" id="business_contact_name" name="business_contact_name" class="kyc-form-input" 
+                           value="<?php echo esc_attr($form_data->business_contact_name ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
+                </div>
+                
+                <div class="kyc-form-group">
+                    <label class="kyc-form-label required" for="job_title">Cargo</label>
+                    <input type="text" id="job_title" name="job_title" class="kyc-form-input" 
+                           value="<?php echo esc_attr($form_data->job_title ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
+                </div>
+                
+                <div class="kyc-form-group">
+                    <label class="kyc-form-label required" for="business_email">E-mail Comercial</label>
+                    <input type="email" id="business_email" name="business_email" class="kyc-form-input" 
+                           value="<?php echo esc_attr($form_data->business_email ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
+                </div>
+                
+                <div class="kyc-form-group">
+                    <label class="kyc-form-label required" for="business_telephone">Telefone Comercial</label>
+                    <input type="tel" id="business_telephone" name="business_telephone" class="kyc-form-input" 
+                           value="<?php echo esc_attr($form_data->business_telephone ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
+                </div>
+            </div>
+            
+            <!-- Detalhes da Empresa -->
+            <div class="kyc-form-grid">
+                <div class="kyc-form-group">
+                    <label class="kyc-form-label required" for="full_company_name">Nome Completo da Empresa</label>
+                    <input type="text" id="full_company_name" name="full_company_name" class="kyc-form-input" 
+                           value="<?php echo esc_attr($form_data->full_company_name ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
                 </div>
                 
                 <div class="kyc-form-group">
@@ -513,27 +541,113 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                 </div>
                 
                 <div class="kyc-form-group">
-                    <label class="kyc-form-label required" for="business_contact_name">Nome do Contato Comercial</label>
-                    <input type="text" id="business_contact_name" name="business_contact_name" class="kyc-form-input" 
-                           value="<?php echo esc_attr($form_data->business_contact_name ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
-                </div>
-                
-                <div class="kyc-form-group">
-                    <label class="kyc-form-label required" for="business_email">E-mail Comercial</label>
-                    <input type="email" id="business_email" name="business_email" class="kyc-form-input" 
-                           value="<?php echo esc_attr($form_data->business_email ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
-                </div>
-                
-                <div class="kyc-form-group">
-                    <label class="kyc-form-label required" for="business_phone">Telefone Comercial</label>
-                    <input type="tel" id="business_phone" name="business_phone" class="kyc-form-input" 
-                           value="<?php echo esc_attr($form_data->business_phone ?? ''); ?>" <?php echo !$is_individual ? 'required' : ''; ?>>
-                </div>
-                
-                <div class="kyc-form-group">
                     <label class="kyc-form-label required" for="business_address">Endereço Comercial Completo</label>
                     <textarea id="business_address" name="business_address" class="kyc-form-input" style="min-height: 80px;" 
                               <?php echo !$is_individual ? 'required' : ''; ?>><?php echo esc_textarea($form_data->business_address ?? ''); ?></textarea>
+                </div>
+            </div>
+            
+            <!-- Directors and Shareholders -->
+            <div class="directors-shareholders-grid">
+                <div class="directors-list">
+                    <h4>Lista de Diretores</h4>
+                    <div id="directors-container">
+                        <?php 
+                        $directors = $form_data->list_of_directors ?? '';
+                        if ($directors) {
+                            $directors_array = json_decode($directors, true) ?: [];
+                            foreach ($directors_array as $index => $director) {
+                                echo '<div class="director-item">
+                                        <input type="text" name="directors[' . $index . '][name]" value="' . esc_attr($director['name'] ?? '') . '" placeholder="Nome do Diretor" required onchange="updateDirectorDocumentLabel(' . $index . ')">
+                                        <input type="text" name="directors[' . $index . '][position]" value="' . esc_attr($director['position'] ?? '') . '" placeholder="Cargo" required onchange="updateDirectorDocumentLabel(' . $index . ')">
+                                        <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
+                                      </div>';
+                            }
+                        } else {
+                            echo '<div class="director-item">
+                                    <input type="text" name="directors[0][name]" placeholder="Nome do Diretor" required onchange="updateDirectorDocumentLabel(0)">
+                                    <input type="text" name="directors[0][position]" placeholder="Cargo" required onchange="updateDirectorDocumentLabel(0)">
+                                    <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
+                                  </div>';
+                        }
+                        ?>
+                    </div>
+                    <button type="button" class="add-director-btn" onclick="addDirector()">+ Adicionar Diretor</button>
+                </div>
+                
+                <!-- Director Documents Section -->
+                <div class="director-documents-section">
+                    <h4>Documentos de Identificação dos Diretores</h4>
+                    <p style="color: #6c757d; font-size: 14px; margin-bottom: 20px;">Cada diretor deve enviar seu documento de identificação (passaporte, carteira de motorista ou RG).</p>
+                    <div id="director-documents-container">
+                        <?php 
+                        $directors = $form_data->list_of_directors ?? '';
+                        if ($directors) {
+                            $directors_array = json_decode($directors, true) ?: [];
+                            foreach ($directors_array as $index => $director) {
+                                echo '<div class="director-document-item" data-director-index="' . $index . '">
+                                        <div class="director-document-header">
+                                            <strong>' . esc_attr($director['name'] ?? 'Diretor ' . ($index + 1)) . '</strong> - ' . esc_attr($director['position'] ?? 'Cargo') . '
+                                        </div>
+                                        <div class="kyc-document-upload" onclick="document.getElementById(\'director_doc_' . $index . '\').click()">
+                                            <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                <polyline points="14,2 14,8 20,8"/>
+                                            </svg>
+                                            <div class="kyc-upload-text">Enviar Documento de ID</div>
+                                            <div class="kyc-upload-subtext">Passaporte, Carteira de Motorista, RG</div>
+                                        </div>
+                                        <input type="file" id="director_doc_' . $index . '" name="director_documents[' . $index . ']" style="display: none;" 
+                                               accept=".pdf,.jpg,.jpeg,.png" required>
+                                        <div id="director_doc_' . $index . '_preview"></div>
+                                      </div>';
+                            }
+                        } else {
+                            echo '<div class="director-document-item" data-director-index="0">
+                                    <div class="director-document-header">
+                                        <strong>Diretor 1</strong> - Cargo
+                                    </div>
+                                    <div class="kyc-document-upload" onclick="document.getElementById(\'director_doc_0\').click()">
+                                        <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14,2 14,8 20,8"/>
+                                        </svg>
+                                        <div class="kyc-upload-text">Enviar Documento de ID</div>
+                                        <div class="kyc-upload-subtext">Passaporte, Carteira de Motorista, RG</div>
+                                    </div>
+                                    <input type="file" id="director_doc_0" name="director_documents[0]" style="display: none;" 
+                                           accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <div id="director_doc_0_preview"></div>
+                                  </div>';
+                        }
+                        ?>
+                    </div>
+                </div>
+                
+                <div class="shareholders-list">
+                    <h4>Lista de Acionistas e Percentual de Participação</h4>
+                    <div id="shareholders-container">
+                        <?php 
+                        $shareholders = $form_data->list_of_shareholders ?? '';
+                        if ($shareholders) {
+                            $shareholders_array = json_decode($shareholders, true) ?: [];
+                            foreach ($shareholders_array as $index => $shareholder) {
+                                echo '<div class="shareholder-item">
+                                        <input type="text" name="shareholders[' . $index . '][name]" value="' . esc_attr($shareholder['name'] ?? '') . '" placeholder="Nome do Acionista" required>
+                                        <input type="number" name="shareholders[' . $index . '][percentage]" value="' . esc_attr($shareholder['percentage'] ?? '') . '" placeholder="%" min="0" max="100" step="0.01" required>
+                                        <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
+                                      </div>';
+                            }
+                        } else {
+                            echo '<div class="shareholder-item">
+                                    <input type="text" name="shareholders[0][name]" placeholder="Nome do Acionista" required>
+                                    <input type="number" name="shareholders[0][percentage]" placeholder="%" min="0" max="100" step="0.01" required>
+                                    <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
+                                  </div>';
+                        }
+                        ?>
+                    </div>
+                    <button type="button" class="add-shareholder-btn" onclick="addShareholder()">+ Adicionar Acionista</button>
                 </div>
             </div>
         </div>
@@ -547,6 +661,39 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
             <small style="color: #6c757d; margin-top: 8px; display: block;">
                 Liste todos os sites, perfis de redes sociais ou plataformas onde você planeja promover produtos afiliados. Cada URL deve estar em uma linha separada.
             </small>
+        </div>
+
+        <!-- Company Document Uploads (Company Only) -->
+        <div class="kyc-form-grid company-fields-section <?php echo !$is_individual ? 'show' : ''; ?>">
+            <div class="kyc-form-group">
+                <label class="kyc-form-label required">Certificado de Registro da Empresa</label>
+                <div class="kyc-document-upload" onclick="document.getElementById('company_registration_certificate').click()">
+                    <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                    </svg>
+                    <div class="kyc-upload-text">Clique para fazer upload ou arraste e solte</div>
+                    <div class="kyc-upload-subtext">Documento oficial de registro da empresa</div>
+                </div>
+                <input type="file" id="company_registration_certificate" name="company_registration_certificate" style="display: none;" 
+                       accept=".pdf,.jpg,.jpeg,.png" <?php echo !$is_individual ? 'required' : ''; ?>>
+                <div id="company_registration_certificate_preview"></div>
+            </div>
+
+            <div class="kyc-form-group">
+                <label class="kyc-form-label required">Licença Comercial</label>
+                <div class="kyc-document-upload" onclick="document.getElementById('business_license').click()">
+                    <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                    </svg>
+                    <div class="kyc-upload-text">Clique para fazer upload ou arraste e solte</div>
+                    <div class="kyc-upload-subtext">Licença para operar o negócio</div>
+                </div>
+                <input type="file" id="business_license" name="business_license" style="display: none;" 
+                       accept=".pdf,.jpg,.jpeg,.png" <?php echo !$is_individual ? 'required' : ''; ?>>
+                <div id="business_license_preview"></div>
+            </div>
         </div>
 
         <!-- Form Actions -->
@@ -578,6 +725,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // File upload handling
     setupFileUpload('address_proof');
     setupFileUpload('identification');
+    setupFileUpload('company_registration_certificate');
+    setupFileUpload('business_license');
 
     // Save draft functionality
     saveDraftBtn.addEventListener('click', function() {
@@ -587,6 +736,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Submit form functionality
     kycForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        // Validate form before submission
+        if (!validateKYCForm()) {
+            return;
+        }
+        
         submitForm('submitted');
     });
 
@@ -720,7 +875,177 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.remove();
         }, 5000);
     }
+    
+    // Form validation function
+    function validateKYCForm() {
+        const form = document.getElementById('kycForm');
+        const accountType = form.querySelector('input[name="account_type"]').value;
+        let isValid = true;
+        let errors = [];
+        
+        // Email validation
+        const emails = form.querySelectorAll('input[type="email"]');
+        emails.forEach(email => {
+            if (email.value && !isValidEmail(email.value)) {
+                isValid = false;
+                email.style.borderColor = '#dc3545';
+                errors.push(`Formato de email inválido: ${email.value}`);
+            } else {
+                email.style.borderColor = '';
+            }
+        });
+        
+        // Phone number validation
+        const phones = form.querySelectorAll('input[type="tel"]');
+        phones.forEach(phone => {
+            if (phone.value && !isValidPhone(phone.value)) {
+                isValid = false;
+                phone.style.borderColor = '#dc3545';
+                errors.push(`Formato de telefone inválido: ${phone.value}`);
+            } else {
+                phone.style.borderColor = '';
+            }
+        });
+        
+        // Company-specific validation
+        if (accountType === 'Company') {
+            // Validate shareholders percentage totals
+            const shareholderPercentages = form.querySelectorAll('input[name*="shareholders"][name*="percentage"]');
+            let totalPercentage = 0;
+            shareholderPercentages.forEach(input => {
+                if (input.value) {
+                    totalPercentage += parseFloat(input.value) || 0;
+                }
+            });
+            
+            if (totalPercentage > 100) {
+                isValid = false;
+                shareholderPercentages.forEach(input => input.style.borderColor = '#dc3545');
+                errors.push('O percentual total dos acionistas não pode exceder 100%');
+            } else {
+                shareholderPercentages.forEach(input => input.style.borderColor = '');
+            }
+        }
+        
+        // Show validation errors
+        if (!isValid) {
+            showNotification('Por favor, corrija os seguintes erros:\n• ' + errors.join('\n• '), 'error');
+        }
+        
+        return isValid;
+    }
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    function isValidPhone(phone) {
+        // Allow various phone formats with country codes
+        const phoneRegex = /^[+]?[\d\s\-\(\)]+$/;
+        return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
+    }
 });
+
+// Directors and Shareholders Management Functions
+let directorCount = <?php echo isset($form_data->list_of_directors) ? count(json_decode($form_data->list_of_directors, true) ?: [1]) : 1; ?>;
+let shareholderCount = <?php echo isset($form_data->list_of_shareholders) ? count(json_decode($form_data->list_of_shareholders, true) ?: [1]) : 1; ?>;
+
+function addDirector() {
+    const container = document.getElementById('directors-container');
+    const docContainer = document.getElementById('director-documents-container');
+    
+    // Add director form fields
+    const directorItem = document.createElement('div');
+    directorItem.className = 'director-item';
+    directorItem.innerHTML = `
+        <input type="text" name="directors[${directorCount}][name]" placeholder="Nome do Diretor" required onchange="updateDirectorDocumentLabel(${directorCount})">
+        <input type="text" name="directors[${directorCount}][position]" placeholder="Cargo" required onchange="updateDirectorDocumentLabel(${directorCount})">
+        <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
+    `;
+    container.appendChild(directorItem);
+    
+    // Add director document upload
+    const docItem = document.createElement('div');
+    docItem.className = 'director-document-item';
+    docItem.setAttribute('data-director-index', directorCount);
+    docItem.innerHTML = `
+        <div class="director-document-header">
+            <strong>Diretor ${directorCount + 1}</strong> - Cargo
+        </div>
+        <div class="kyc-document-upload" onclick="document.getElementById('director_doc_${directorCount}').click()">
+            <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+            </svg>
+            <div class="kyc-upload-text">Enviar Documento de ID</div>
+            <div class="kyc-upload-subtext">Passaporte, Carteira de Motorista, RG</div>
+        </div>
+        <input type="file" id="director_doc_${directorCount}" name="director_documents[${directorCount}]" style="display: none;" 
+               accept=".pdf,.jpg,.jpeg,.png" required>
+        <div id="director_doc_${directorCount}_preview"></div>
+    `;
+    docContainer.appendChild(docItem);
+    
+    directorCount++;
+}
+
+function updateDirectorDocumentLabel(index) {
+    const nameInput = document.querySelector(`input[name="directors[${index}][name]"]`);
+    const positionInput = document.querySelector(`input[name="directors[${index}][position]"]`);
+    const docHeader = document.querySelector(`[data-director-index="${index}"] .director-document-header strong`);
+    
+    if (nameInput && positionInput && docHeader) {
+        const name = nameInput.value || `Diretor ${index + 1}`;
+        const position = positionInput.value || 'Cargo';
+        docHeader.nextSibling.textContent = ` - ${position}`;
+        docHeader.textContent = name;
+    }
+}
+
+function removeDirector(button) {
+    const container = document.getElementById('directors-container');
+    const docContainer = document.getElementById('director-documents-container');
+    
+    if (container.children.length > 1) {
+        // Find the index of the director being removed
+        const directorItems = Array.from(container.children);
+        const itemIndex = directorItems.indexOf(button.parentElement);
+        
+        // Remove the director form fields
+        button.parentElement.remove();
+        
+        // Remove corresponding document upload
+        const docItems = docContainer.children;
+        if (docItems[itemIndex]) {
+            docItems[itemIndex].remove();
+        }
+    } else {
+        alert('Pelo menos um diretor é obrigatório para contas empresariais.');
+    }
+}
+
+function addShareholder() {
+    const container = document.getElementById('shareholders-container');
+    const shareholderItem = document.createElement('div');
+    shareholderItem.className = 'shareholder-item';
+    shareholderItem.innerHTML = `
+        <input type="text" name="shareholders[${shareholderCount}][name]" placeholder="Nome do Acionista" required>
+        <input type="number" name="shareholders[${shareholderCount}][percentage]" placeholder="%" min="0" max="100" step="0.01" required>
+        <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
+    `;
+    container.appendChild(shareholderItem);
+    shareholderCount++;
+}
+
+function removeShareholder(button) {
+    const container = document.getElementById('shareholders-container');
+    if (container.children.length > 1) {
+        button.parentElement.remove();
+    } else {
+        alert('Pelo menos um acionista é obrigatório para contas empresariais.');
+    }
+}
 
 // Add spinning animation for loading state
 const style = document.createElement('style');

@@ -4,9 +4,16 @@
  * This allows testing the plugin functionality without a full WordPress installation
  */
 
+// Start session for user authentication
+session_start();
+
 // Simulate WordPress environment basics
 define('ABSPATH', __DIR__ . '/');
 define('WP_DEBUG', true);
+
+// Include database helper
+require_once 'database.php';
+global $affiliate_db;
 
 // Simple autoloader for WordPress-like functions
 function wp_simulate_functions() {
