@@ -102,6 +102,14 @@ class AffiliatePortal {
         add_action('wp_ajax_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
         add_action('wp_ajax_nopriv_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
         
+        // Document approval/rejection system
+        add_action('wp_ajax_affiliate_approve_document', array($this, 'handle_document_approval'));
+        add_action('wp_ajax_nopriv_affiliate_approve_document', array($this, 'handle_document_approval'));
+        add_action('wp_ajax_affiliate_reject_document', array($this, 'handle_document_rejection'));
+        add_action('wp_ajax_nopriv_affiliate_reject_document', array($this, 'handle_document_rejection'));
+        add_action('wp_ajax_affiliate_get_document_details', array($this, 'get_document_details'));
+        add_action('wp_ajax_nopriv_affiliate_get_document_details', array($this, 'get_document_details'));
+        
         // Create pages on activation and version updates
         add_action('wp_loaded', array($this, 'maybe_update_pages'));
         
@@ -497,23 +505,20 @@ class AffiliatePortal {
         return false;
     }
     
-    // Ensure KYC table exists (called before KYC operations)
-    private function ensure_kyc_table_exists() {
+    // Consolidated KYC table creation method
+    private function create_consolidated_kyc_table($kyc_table_name, $charset_collate) {
         global $wpdb;
-        $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
         
         // Check if table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$kyc_table_name'") === $kyc_table_name;
         
         if (!$table_exists) {
-            error_log('Affiliate Portal: KYC table missing, creating now...');
+            error_log('Affiliate Portal: Creating KYC table with comprehensive schema...');
             
-            $charset_collate = $wpdb->get_charset_collate();
-            
-            $kyc_sql = "CREATE TABLE $kyc_table_name (
+            $kyc_sql = "CREATE TABLE IF NOT EXISTS $kyc_table_name (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 user_id mediumint(9) NOT NULL,
-                account_type varchar(20) NOT NULL,
+                account_type varchar(20) NOT NULL DEFAULT 'individual',
                 
                 -- Individual fields
                 full_name varchar(200) DEFAULT '',
@@ -550,20 +555,46 @@ class AffiliatePortal {
                 -- Affiliate sites
                 affiliate_sites text,
                 
-                -- Document URLs
+                -- Document URLs with approval status
                 identity_document_type varchar(50) DEFAULT '',
                 identity_document_number varchar(100) DEFAULT '',
                 identity_document_expiry date NULL,
                 identity_document_url text,
+                identity_document_status varchar(20) DEFAULT 'pending',
+                identity_document_notes text,
+                
                 address_proof_type varchar(50) DEFAULT '',
                 address_proof_url text,
+                address_proof_status varchar(20) DEFAULT 'pending',
+                address_proof_notes text,
+                
                 bank_statement_url text,
+                bank_statement_status varchar(20) DEFAULT 'pending',
+                bank_statement_notes text,
+                
                 selfie_url text,
+                selfie_status varchar(20) DEFAULT 'pending',
+                selfie_notes text,
+                
                 passport_url text,
+                passport_status varchar(20) DEFAULT 'pending',
+                passport_notes text,
+                
                 company_registration_certificate_url text,
+                company_registration_certificate_status varchar(20) DEFAULT 'pending',
+                company_registration_certificate_notes text,
+                
                 company_address_proof_url text,
+                company_address_proof_status varchar(20) DEFAULT 'pending',
+                company_address_proof_notes text,
+                
                 business_license_url text,
+                business_license_status varchar(20) DEFAULT 'pending',
+                business_license_notes text,
+                
                 directors_id_docs_url text,
+                directors_id_docs_status varchar(20) DEFAULT 'pending',
+                directors_id_docs_notes text,
                 
                 -- Company specific
                 company_type varchar(100) DEFAULT '',
@@ -580,15 +611,18 @@ class AffiliatePortal {
                 
                 -- Status and admin
                 kyc_status varchar(50) DEFAULT 'draft',
+                overall_status varchar(50) DEFAULT 'pending_review',
                 admin_notes text,
                 submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
                 reviewed_at datetime NULL,
                 reviewed_by varchar(100) DEFAULT '',
+                last_updated datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 
                 PRIMARY KEY (id),
                 UNIQUE KEY user_id (user_id),
                 KEY idx_account_type (account_type),
-                KEY idx_kyc_status (kyc_status)
+                KEY idx_kyc_status (kyc_status),
+                KEY idx_overall_status (overall_status)
             ) $charset_collate;";
             
             require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -596,16 +630,26 @@ class AffiliatePortal {
             
             // Verify creation
             $created = $wpdb->get_var("SHOW TABLES LIKE '$kyc_table_name'") === $kyc_table_name;
-            error_log('Affiliate Portal: KYC table creation attempt result: ' . ($created ? 'SUCCESS' : 'FAILED'));
+            error_log('Affiliate Portal: KYC table creation result: ' . ($created ? 'SUCCESS' : 'FAILED'));
             
             if ($wpdb->last_error) {
                 error_log('Affiliate Portal: KYC table creation error: ' . $wpdb->last_error);
             }
             
-            return $created;
+            return $result;
         }
         
-        return true;
+        error_log('Affiliate Portal: KYC table already exists');
+        return ['KYC table already exists'];
+    }
+    
+    // Ensure KYC table exists (called before KYC operations) - now uses consolidated method
+    private function ensure_kyc_table_exists() {
+        global $wpdb;
+        $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        return $this->create_consolidated_kyc_table($kyc_table_name, $charset_collate);
     }
     
     // Admin authentication - using database sessions
@@ -648,7 +692,7 @@ class AffiliatePortal {
         
         $charset_collate = $wpdb->get_charset_collate();
         
-        $sql = "CREATE TABLE $table_name (
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             username varchar(64) NOT NULL UNIQUE,
             password varchar(256) NOT NULL,
@@ -720,60 +764,9 @@ class AffiliatePortal {
         
         $email_result = dbDelta($email_config_sql);
         
-        // Create KYC (Know Your Customer) table for both Individual and Company types
+        // Create comprehensive KYC table using consolidated schema
         $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
-        
-        $kyc_sql = "CREATE TABLE $kyc_table_name (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            user_id mediumint(9) NOT NULL,
-            account_type varchar(20) NOT NULL,
-            full_name varchar(200) DEFAULT '',
-            date_of_birth date NULL,
-            email varchar(120) DEFAULT '',
-            mobile_number varchar(20) DEFAULT '',
-            affiliate_type varchar(50) DEFAULT '',
-            address_line1 varchar(255) DEFAULT '',
-            address_line2 varchar(255) DEFAULT '',
-            city varchar(100) DEFAULT '',
-            country varchar(100) DEFAULT '',
-            post_code varchar(20) DEFAULT '',
-            
-            identity_document_type varchar(50) DEFAULT '',
-            identity_document_number varchar(100) DEFAULT '',
-            identity_document_expiry date NULL,
-            identity_document_url text,
-            
-            address_proof_type varchar(50) DEFAULT '',
-            address_proof_url text,
-            
-            bank_statement_url text,
-            
-            selfie_url text,
-            passport_url text,
-            
-            company_registration_certificate_url text,
-            company_type varchar(100) DEFAULT '',
-            registration_number varchar(100) DEFAULT '',
-            tax_id varchar(100) DEFAULT '',
-            incorporation_date date NULL,
-            business_license_url text,
-            
-            directors_list text,
-            shareholdings text,
-            
-            kyc_status varchar(50) DEFAULT 'draft',
-            admin_notes text,
-            submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
-            reviewed_at datetime NULL,
-            reviewed_by varchar(100) DEFAULT '',
-            
-            PRIMARY KEY (id),
-            UNIQUE KEY user_id (user_id),
-            KEY idx_account_type (account_type),
-            KEY idx_kyc_status (kyc_status)
-        ) $charset_collate;";
-        
-        $kyc_result = dbDelta($kyc_sql);
+        $kyc_result = $this->create_consolidated_kyc_table($kyc_table_name, $charset_collate);
         
         // Log KYC table creation result
         error_log('Affiliate Portal: KYC table creation result: ' . print_r($kyc_result, true));
@@ -3749,7 +3742,6 @@ class AffiliatePortal {
             }
             $kyc_data['list_of_shareholders'] = json_encode($shareholders);
         }
-        }
         if (isset($_POST['address_line1'])) {
             $kyc_data['address_line1'] = sanitize_text_field($_POST['address_line1']);
         }
@@ -4318,6 +4310,341 @@ Submitted on: " . current_time('F j, Y \a\t g:i A') . "
         }
         
         wp_send_json_success('KYC status updated successfully');
+    }
+    
+    // Handle document approval
+    public function handle_document_approval() {
+        // Check admin authentication
+        if (!$this->is_admin_logged_in()) {
+            wp_send_json_error('Access denied');
+            return;
+        }
+        
+        if (!isset($_POST['user_id']) || !isset($_POST['document_type'])) {
+            wp_send_json_error('User ID and document type are required');
+            return;
+        }
+        
+        global $wpdb;
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        $user_id = intval($_POST['user_id']);
+        $document_type = sanitize_text_field($_POST['document_type']);
+        $notes = isset($_POST['notes']) ? sanitize_textarea_field($_POST['notes']) : '';
+        
+        // Valid document types
+        $valid_documents = array(
+            'identity_document', 'address_proof', 'bank_statement', 'selfie', 'passport',
+            'company_registration_certificate', 'company_address_proof', 'business_license', 'directors_id_docs'
+        );
+        
+        if (!in_array($document_type, $valid_documents)) {
+            wp_send_json_error('Invalid document type');
+            return;
+        }
+        
+        // Update document status to approved
+        $status_field = $document_type . '_status';
+        $notes_field = $document_type . '_notes';
+        
+        $updated = $wpdb->update(
+            $kyc_table,
+            array(
+                $status_field => 'approved',
+                $notes_field => $notes,
+                'reviewed_at' => current_time('mysql'),
+                'reviewed_by' => $this->get_current_admin_username()
+            ),
+            array('user_id' => $user_id)
+        );
+        
+        if ($updated === false) {
+            wp_send_json_error('Failed to approve document: ' . $wpdb->last_error);
+            return;
+        }
+        
+        // Check if all documents are approved to update overall status
+        $this->update_overall_kyc_status($user_id);
+        
+        wp_send_json_success('Document approved successfully');
+    }
+    
+    // Handle document rejection
+    public function handle_document_rejection() {
+        // Check admin authentication
+        if (!$this->is_admin_logged_in()) {
+            wp_send_json_error('Access denied');
+            return;
+        }
+        
+        if (!isset($_POST['user_id']) || !isset($_POST['document_type']) || !isset($_POST['notes'])) {
+            wp_send_json_error('User ID, document type, and rejection notes are required');
+            return;
+        }
+        
+        global $wpdb;
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        $user_id = intval($_POST['user_id']);
+        $document_type = sanitize_text_field($_POST['document_type']);
+        $notes = sanitize_textarea_field($_POST['notes']);
+        
+        // Valid document types
+        $valid_documents = array(
+            'identity_document', 'address_proof', 'bank_statement', 'selfie', 'passport',
+            'company_registration_certificate', 'company_address_proof', 'business_license', 'directors_id_docs'
+        );
+        
+        if (!in_array($document_type, $valid_documents)) {
+            wp_send_json_error('Invalid document type');
+            return;
+        }
+        
+        if (empty($notes)) {
+            wp_send_json_error('Rejection notes are required');
+            return;
+        }
+        
+        // Update document status to rejected
+        $status_field = $document_type . '_status';
+        $notes_field = $document_type . '_notes';
+        
+        $updated = $wpdb->update(
+            $kyc_table,
+            array(
+                $status_field => 'rejected',
+                $notes_field => $notes,
+                'reviewed_at' => current_time('mysql'),
+                'reviewed_by' => $this->get_current_admin_username(),
+                'overall_status' => 'needs_resubmission'
+            ),
+            array('user_id' => $user_id)
+        );
+        
+        if ($updated === false) {
+            wp_send_json_error('Failed to reject document: ' . $wpdb->last_error);
+            return;
+        }
+        
+        // Send notification to user about rejection
+        $this->send_document_rejection_notification($user_id, $document_type, $notes);
+        
+        wp_send_json_success('Document rejected successfully');
+    }
+    
+    // Get document details for admin review
+    public function get_document_details() {
+        // Check admin authentication
+        if (!$this->is_admin_logged_in()) {
+            wp_send_json_error('Access denied');
+            return;
+        }
+        
+        if (!isset($_POST['user_id'])) {
+            wp_send_json_error('User ID is required');
+            return;
+        }
+        
+        global $wpdb;
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        $user_id = intval($_POST['user_id']);
+        
+        // Get KYC details with user information
+        $query = "
+            SELECT 
+                k.*,
+                u.username,
+                u.email,
+                u.first_name,
+                u.last_name
+            FROM $kyc_table k 
+            INNER JOIN $users_table u ON k.user_id = u.id 
+            WHERE k.user_id = %d
+        ";
+        
+        $kyc_data = $wpdb->get_row($wpdb->prepare($query, $user_id));
+        
+        if (!$kyc_data) {
+            wp_send_json_error('User KYC data not found');
+            return;
+        }
+        
+        // Format document information for admin review
+        $documents = array(
+            'identity_document' => array(
+                'url' => $kyc_data->identity_document_url,
+                'status' => $kyc_data->identity_document_status,
+                'notes' => $kyc_data->identity_document_notes,
+                'type' => $kyc_data->identity_document_type,
+                'number' => $kyc_data->identity_document_number,
+                'expiry' => $kyc_data->identity_document_expiry
+            ),
+            'address_proof' => array(
+                'url' => $kyc_data->address_proof_url,
+                'status' => $kyc_data->address_proof_status,
+                'notes' => $kyc_data->address_proof_notes,
+                'type' => $kyc_data->address_proof_type
+            ),
+            'bank_statement' => array(
+                'url' => $kyc_data->bank_statement_url,
+                'status' => $kyc_data->bank_statement_status,
+                'notes' => $kyc_data->bank_statement_notes
+            ),
+            'selfie' => array(
+                'url' => $kyc_data->selfie_url,
+                'status' => $kyc_data->selfie_status,
+                'notes' => $kyc_data->selfie_notes
+            ),
+            'passport' => array(
+                'url' => $kyc_data->passport_url,
+                'status' => $kyc_data->passport_status,
+                'notes' => $kyc_data->passport_notes
+            )
+        );
+        
+        // Add company documents if account type is company
+        if ($kyc_data->account_type === 'company') {
+            $documents['company_registration_certificate'] = array(
+                'url' => $kyc_data->company_registration_certificate_url,
+                'status' => $kyc_data->company_registration_certificate_status,
+                'notes' => $kyc_data->company_registration_certificate_notes
+            );
+            $documents['company_address_proof'] = array(
+                'url' => $kyc_data->company_address_proof_url,
+                'status' => $kyc_data->company_address_proof_status,
+                'notes' => $kyc_data->company_address_proof_notes
+            );
+            $documents['business_license'] = array(
+                'url' => $kyc_data->business_license_url,
+                'status' => $kyc_data->business_license_status,
+                'notes' => $kyc_data->business_license_notes
+            );
+            $documents['directors_id_docs'] = array(
+                'url' => $kyc_data->directors_id_docs_url,
+                'status' => $kyc_data->directors_id_docs_status,
+                'notes' => $kyc_data->directors_id_docs_notes
+            );
+        }
+        
+        wp_send_json_success(array(
+            'user_data' => array(
+                'username' => $kyc_data->username,
+                'email' => $kyc_data->email,
+                'full_name' => trim($kyc_data->first_name . ' ' . $kyc_data->last_name),
+                'account_type' => $kyc_data->account_type,
+                'overall_status' => $kyc_data->overall_status
+            ),
+            'documents' => $documents
+        ));
+    }
+    
+    // Update overall KYC status based on individual document statuses
+    private function update_overall_kyc_status($user_id) {
+        global $wpdb;
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        $kyc_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $kyc_table WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if (!$kyc_data) {
+            return false;
+        }
+        
+        // Define required documents based on account type
+        $required_docs = array('identity_document', 'address_proof', 'bank_statement', 'selfie');
+        
+        if ($kyc_data->account_type === 'company') {
+            $required_docs = array_merge($required_docs, array(
+                'company_registration_certificate', 'business_license', 'directors_id_docs'
+            ));
+        }
+        
+        $all_approved = true;
+        $has_rejected = false;
+        
+        foreach ($required_docs as $doc) {
+            $status_field = $doc . '_status';
+            $url_field = $doc . '_url';
+            
+            // Skip if document URL is empty (not uploaded)
+            if (empty($kyc_data->$url_field)) {
+                $all_approved = false;
+                continue;
+            }
+            
+            if ($kyc_data->$status_field === 'rejected') {
+                $has_rejected = true;
+                $all_approved = false;
+            } elseif ($kyc_data->$status_field !== 'approved') {
+                $all_approved = false;
+            }
+        }
+        
+        // Determine overall status
+        $overall_status = 'pending_review';
+        if ($has_rejected) {
+            $overall_status = 'needs_resubmission';
+        } elseif ($all_approved) {
+            $overall_status = 'approved';
+        }
+        
+        // Update overall status
+        $wpdb->update(
+            $kyc_table,
+            array('overall_status' => $overall_status),
+            array('user_id' => $user_id)
+        );
+        
+        return $overall_status;
+    }
+    
+    // Send notification to user about document rejection
+    private function send_document_rejection_notification($user_id, $document_type, $notes) {
+        global $wpdb;
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        
+        $user = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $users_table WHERE id = %d",
+            $user_id
+        ));
+        
+        if (!$user) {
+            return false;
+        }
+        
+        $document_names = array(
+            'identity_document' => 'Identity Document',
+            'address_proof' => 'Address Proof',
+            'bank_statement' => 'Bank Statement',
+            'selfie' => 'Selfie',
+            'passport' => 'Passport',
+            'company_registration_certificate' => 'Company Registration Certificate',
+            'company_address_proof' => 'Company Address Proof',
+            'business_license' => 'Business License',
+            'directors_id_docs' => 'Directors ID Documents'
+        );
+        
+        $document_name = isset($document_names[$document_type]) ? $document_names[$document_type] : $document_type;
+        
+        $subject = 'Document Rejection - Action Required';
+        $message = "Dear {$user->first_name},\n\n";
+        $message .= "Your {$document_name} has been rejected and requires resubmission.\n\n";
+        $message .= "Reason for rejection:\n{$notes}\n\n";
+        $message .= "Please log in to your dashboard and resubmit the corrected document.\n\n";
+        $message .= "Thank you,\nAffiliate Portal Team";
+        
+        wp_mail($user->email, $subject, $message);
+        
+        return true;
+    }
+    
+    // Get current admin username for logging
+    private function get_current_admin_username() {
+        $admin_data = $this->is_admin_authenticated();
+        return $admin_data ? $admin_data['username'] : 'unknown';
     }
     
     // Get comprehensive KYC verification details for admin review
