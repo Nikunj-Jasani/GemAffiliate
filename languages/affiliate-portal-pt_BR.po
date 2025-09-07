@@ -1,0 +1,443 @@
+# Portuguese (Brazil) language file for Affiliate Portal
+# Copyright (C) 2025 Affiliate Portal
+# This file is distributed under the same license as the Affiliate Portal package.
+msgid ""
+msgstr ""
+"Project-Id-Version: Affiliate Portal 1.3.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-29 06:56:00+0000\n"
+"PO-Revision-Date: 2025-08-29 06:56:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Page titles
+msgid "Affiliate Login"
+msgstr "Login de Afiliado"
+
+msgid "Affiliate Registration"
+msgstr "Registro de Afiliado"
+
+msgid "Affiliate Dashboard"
+msgstr "Painel do Afiliado"
+
+msgid "Admin Login"
+msgstr "Login do Administrador"
+
+msgid "Admin Dashboard"
+msgstr "Painel do Administrador"
+
+# Navigation
+msgid "Home"
+msgstr "Início"
+
+msgid "Login"
+msgstr "Entrar"
+
+msgid "Register"
+msgstr "Registrar"
+
+msgid "Dashboard"
+msgstr "Painel"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Language"
+msgstr "Idioma"
+
+msgid "English"
+msgstr "Inglês"
+
+msgid "Portuguese"
+msgstr "Português"
+
+# Form labels
+msgid "Username"
+msgstr "Nome de usuário"
+
+msgid "Password"
+msgstr "Senha"
+
+msgid "Confirm Password"
+msgstr "Confirmar senha"
+
+msgid "Email Address"
+msgstr "Endereço de email"
+
+msgid "First Name"
+msgstr "Primeiro nome"
+
+msgid "Last Name"
+msgstr "Sobrenome"
+
+msgid "Date of Birth"
+msgstr "Data de nascimento"
+
+msgid "Company Name"
+msgstr "Nome da empresa"
+
+msgid "Mobile Number"
+msgstr "Número do celular"
+
+msgid "Country"
+msgstr "País"
+
+msgid "State/Province"
+msgstr "Estado/Província"
+
+msgid "City"
+msgstr "Cidade"
+
+msgid "ZIP/Postal Code"
+msgstr "CEP/Código postal"
+
+msgid "Address Line 1"
+msgstr "Endereço linha 1"
+
+msgid "Address Line 2"
+msgstr "Endereço linha 2"
+
+msgid "Chat ID/Channel"
+msgstr "ID do chat/Canal"
+
+msgid "Affiliate Type"
+msgstr "Tipo de afiliado"
+
+msgid "Currency"
+msgstr "Moeda"
+
+msgid "Security Question"
+msgstr "Pergunta de segurança"
+
+msgid "Security Answer"
+msgstr "Resposta de segurança"
+
+msgid "Name Prefix"
+msgstr "Prefixo do nome"
+
+msgid "Type"
+msgstr "Tipo"
+
+msgid "Country Code"
+msgstr "Código do país"
+
+# Form options
+msgid "Mr."
+msgstr "Sr."
+
+msgid "Mrs."
+msgstr "Sra."
+
+msgid "Ms."
+msgstr "Srta."
+
+msgid "Dr."
+msgstr "Dr."
+
+msgid "Individual"
+msgstr "Individual"
+
+msgid "Company"
+msgstr "Empresa"
+
+msgid "Influencer"
+msgstr "Influenciador"
+
+msgid "Content Creator"
+msgstr "Criador de conteúdo"
+
+msgid "Media Buyer"
+msgstr "Comprador de mídia"
+
+msgid "Email Marketer"
+msgstr "Profissional de email marketing"
+
+msgid "Social Media Manager"
+msgstr "Gerente de mídias sociais"
+
+msgid "PPC Specialist"
+msgstr "Especialista em PPC"
+
+msgid "SEO Specialist"
+msgstr "Especialista em SEO"
+
+msgid "Blogger"
+msgstr "Blogueiro"
+
+msgid "YouTuber"
+msgstr "YouTuber"
+
+msgid "Website Owner"
+msgstr "Proprietário de site"
+
+msgid "App Developer"
+msgstr "Desenvolvedor de aplicativos"
+
+msgid "Other"
+msgstr "Outro"
+
+# Currency options
+msgid "USD - US Dollar"
+msgstr "USD - Dólar americano"
+
+msgid "EUR - Euro"
+msgstr "EUR - Euro"
+
+msgid "GBP - British Pound"
+msgstr "GBP - Libra esterlina"
+
+msgid "BRL - Brazilian Real"
+msgstr "BRL - Real brasileiro"
+
+# Security questions
+msgid "What was the name of your first pet?"
+msgstr "Qual era o nome do seu primeiro animal de estimação?"
+
+msgid "What was your mother's maiden name?"
+msgstr "Qual era o nome de solteira da sua mãe?"
+
+msgid "What city were you born in?"
+msgstr "Em que cidade você nasceu?"
+
+msgid "What was the name of your first school?"
+msgstr "Qual era o nome da sua primeira escola?"
+
+msgid "What is your favorite movie?"
+msgstr "Qual é o seu filme favorito?"
+
+# Buttons
+msgid "Submit"
+msgstr "Enviar"
+
+msgid "Login"
+msgstr "Entrar"
+
+msgid "Register Now"
+msgstr "Registrar agora"
+
+msgid "Next"
+msgstr "Próximo"
+
+msgid "Previous"
+msgstr "Anterior"
+
+msgid "Finish"
+msgstr "Finalizar"
+
+msgid "Back to Login"
+msgstr "Voltar ao login"
+
+msgid "Logout"
+msgstr "Sair"
+
+msgid "Change Password"
+msgstr "Alterar senha"
+
+msgid "Upload Documents"
+msgstr "Carregar documentos"
+
+msgid "Download KYC Form"
+msgstr "Baixar formulário KYC"
+
+# Messages
+msgid "Please fill in all required fields"
+msgstr "Por favor, preencha todos os campos obrigatórios"
+
+msgid "Passwords do not match"
+msgstr "As senhas não coincidem"
+
+msgid "Registration successful! Please login with your credentials."
+msgstr "Registro realizado com sucesso! Por favor, faça login com suas credenciais."
+
+msgid "Login successful! Redirecting to dashboard..."
+msgstr "Login realizado com sucesso! Redirecionando para o painel..."
+
+msgid "Invalid username or password"
+msgstr "Nome de usuário ou senha inválidos"
+
+msgid "Access denied. Please login first."
+msgstr "Acesso negado. Por favor, faça login primeiro."
+
+msgid "Password changed successfully"
+msgstr "Senha alterada com sucesso"
+
+msgid "Documents uploaded successfully"
+msgstr "Documentos carregados com sucesso"
+
+msgid "An error occurred. Please try again."
+msgstr "Ocorreu um erro. Por favor, tente novamente."
+
+# Step titles
+msgid "Step 1: Account Credentials"
+msgstr "Passo 1: Credenciais da conta"
+
+msgid "Step 2: Personal Information"
+msgstr "Passo 2: Informações pessoais"
+
+msgid "Step 3: Contact Information"
+msgstr "Passo 3: Informações de contato"
+
+msgid "Step 4: Address Information"
+msgstr "Passo 4: Informações de endereço"
+
+msgid "Step 5: Business Information"
+msgstr "Passo 5: Informações comerciais"
+
+# Dashboard sections
+msgid "Welcome"
+msgstr "Bem-vindo"
+
+msgid "Account Information"
+msgstr "Informações da conta"
+
+msgid "Personal Details"
+msgstr "Detalhes pessoais"
+
+msgid "Contact Details"
+msgstr "Detalhes de contato"
+
+msgid "Address Details"
+msgstr "Detalhes do endereço"
+
+msgid "Business Details"
+msgstr "Detalhes comerciais"
+
+msgid "Account Status"
+msgstr "Status da conta"
+
+msgid "Application Status"
+msgstr "Status da aplicação"
+
+msgid "Pending Approval"
+msgstr "Aguardando aprovação"
+
+msgid "Approved"
+msgstr "Aprovado"
+
+msgid "Rejected"
+msgstr "Rejeitado"
+
+msgid "Under Review"
+msgstr "Em análise"
+
+# Admin sections
+msgid "Total Applications"
+msgstr "Total de aplicações"
+
+msgid "Pending Applications"
+msgstr "Aplicações pendentes"
+
+msgid "Approved Applications"
+msgstr "Aplicações aprovadas"
+
+msgid "Rejected Applications"
+msgstr "Aplicações rejeitadas"
+
+msgid "View Details"
+msgstr "Ver detalhes"
+
+msgid "Edit Status"
+msgstr "Editar status"
+
+msgid "Email Configuration"
+msgstr "Configuração de email"
+
+msgid "Notification Recipients"
+msgstr "Destinatários de notificação"
+
+msgid "Admin Remarks"
+msgstr "Observações do administrador"
+
+msgid "Registration Date"
+msgstr "Data de registro"
+
+msgid "Last Updated"
+msgstr "Última atualização"
+
+# Placeholders
+msgid "Enter your username"
+msgstr "Digite seu nome de usuário"
+
+msgid "Enter your password"
+msgstr "Digite sua senha"
+
+msgid "Enter your email address"
+msgstr "Digite seu endereço de email"
+
+msgid "Select your country"
+msgstr "Selecione seu país"
+
+msgid "Select your state/province"
+msgstr "Selecione seu estado/província"
+
+msgid "Enter your city"
+msgstr "Digite sua cidade"
+
+msgid "Enter your ZIP/postal code"
+msgstr "Digite seu CEP/código postal"
+
+# Validation messages
+msgid "Please enter a valid email address"
+msgstr "Por favor, digite um endereço de email válido"
+
+msgid "Username must be at least 3 characters long"
+msgstr "O nome de usuário deve ter pelo menos 3 caracteres"
+
+msgid "Password must be at least 6 characters long"
+msgstr "A senha deve ter pelo menos 6 caracteres"
+
+msgid "Please select a country"
+msgstr "Por favor, selecione um país"
+
+msgid "Please select a state/province"
+msgstr "Por favor, selecione um estado/província"
+
+# Company documents
+msgid "KYC Documentation"
+msgstr "Documentação KYC"
+
+msgid "Please download and fill the KYC form, then submit it to office@gemmagics.com"
+msgstr "Por favor, baixe e preencha o formulário KYC, depois envie para office@gemmagics.com"
+
+msgid "Company Registration Documents"
+msgstr "Documentos de registro da empresa"
+
+msgid "Tax Identification Documents"
+msgstr "Documentos de identificação fiscal"
+
+msgid "Bank Account Verification"
+msgstr "Verificação de conta bancária"
+
+msgid "Business License"
+msgstr "Licença comercial"
+
+msgid "Other Documents"
+msgstr "Outros documentos"
+
+# Footer
+msgid "Powered by Affiliate Portal"
+msgstr "Desenvolvido por Portal de Afiliados"
+
+msgid "All rights reserved"
+msgstr "Todos os direitos reservados"
+
+# Error messages
+msgid "File upload failed"
+msgstr "Falha no upload do arquivo"
+
+msgid "Invalid file type"
+msgstr "Tipo de arquivo inválido"
+
+msgid "File size too large"
+msgstr "Arquivo muito grande"
+
+msgid "Database error occurred"
+msgstr "Erro de banco de dados ocorrido"
+
+msgid "Session expired. Please login again."
+msgstr "Sessão expirada. Por favor, faça login novamente."
