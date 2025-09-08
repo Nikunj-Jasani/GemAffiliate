@@ -1722,88 +1722,19 @@ if (document.readyState !== 'loading') {
     }
 }
 
-// KYC Form Functionality
+// KYC Form Functionality - DISABLED - Using inline form handler instead
 function initKycForm() {
-    const kycForm = document.getElementById('kycForm');
-    if (!kycForm) return;
-    
-    // Handle save as draft
-    const draftBtn = document.getElementById('saveDraftBtn');
-    if (draftBtn) {
-        draftBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            submitKycForm('draft');
-        });
-    }
-    
-    // Handle submit KYC
-    kycForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitKycForm('submit');
-    });
+    // This function is disabled to prevent conflicts with the inline KYC form handler
+    // The KYC form now uses its own submit handler in templates/kyc-form.php
+    return;
 }
 
+// submitKycForm function - DISABLED - Using inline form handler instead
 function submitKycForm(action) {
-    const kycForm = document.getElementById('kycForm');
-    if (!kycForm) return;
-    
-    // Get affiliate type to determine validation
-    const accountTypeElement = document.querySelector('input[name="account_type"]');
-    const affiliateTypeElement = document.querySelector('input[name="affiliate_type"]');
-    const isIndividual = (accountTypeElement && accountTypeElement.value === 'individual') || 
-                        (affiliateTypeElement && affiliateTypeElement.value === 'individual');
-    
-    // Validate form based on affiliate type
-    if (action === 'submit' && !validateKycForm(isIndividual)) {
-        return;
-    }
-    
-    // Show loading state
-    const submitBtn = kycForm.querySelector('button[type="submit"]');
-    const draftBtn = document.getElementById('saveDraftBtn');
-    const activeBtn = action === 'draft' ? draftBtn : submitBtn;
-    
-    if (activeBtn) {
-        const originalText = activeBtn.innerHTML;
-        activeBtn.innerHTML = '<svg width="16" height="16" class="spinning" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> ' + (action === 'draft' ? 'Saving Draft...' : 'Submitting...');
-        activeBtn.disabled = true;
-        
-        // Create FormData object
-        const formData = new FormData(kycForm);
-        formData.append('action', 'affiliate_submit_kyc');
-        formData.append('kyc_action', action);
-        formData.append('nonce', window.affiliate_ajax?.nonce || 'standalone_nonce');
-        
-        // Submit via fetch to affiliate-portal.php
-        fetch('affiliate-portal.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showKycMessage(data.data, 'success');
-                if (action === 'submit') {
-                    // Redirect to dashboard on successful submission
-                    setTimeout(() => {
-                        window.location.href = 'templates/dashboard-enhanced.php';
-                    }, 2000);
-                }
-            } else {
-                showKycMessage('Error: ' + (data.data || 'Operation failed. Please try again.'), 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showKycMessage('Operation failed. Please check your connection and try again.', 'danger');
-        })
-        .finally(() => {
-            if (activeBtn) {
-                activeBtn.innerHTML = originalText;
-                activeBtn.disabled = false;
-            }
-        });
-    }
+    // This function is disabled to prevent conflicts with the inline KYC form handler
+    // The KYC form now uses its own submit handler in templates/kyc-form.php
+    console.log('submitKycForm called but disabled - using inline handler instead');
+    return;
 }
 
 function validateKycForm(isIndividual) {

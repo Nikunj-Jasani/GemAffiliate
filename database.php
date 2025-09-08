@@ -1,7 +1,7 @@
 <?php
 /**
- * Database configuration for standalone affiliate portal
- * Simulates WordPress database functionality for development
+ * Database simulation for WordPress wpdb functionality
+ * This file creates a mock WordPress database environment for standalone operation
  */
 
 // Prevent direct access
@@ -9,233 +9,371 @@ if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/');
 }
 
-// Database configuration
-if (!defined('DB_HOST')) {
-    define('DB_HOST', 'localhost');
-}
-if (!defined('DB_NAME')) {
-    define('DB_NAME', 'affiliate_portal');
-}
-if (!defined('DB_USER')) {
-    define('DB_USER', 'root');
-}
-if (!defined('DB_PASSWORD')) {
-    define('DB_PASSWORD', '');
-}
-
-// WordPress-like database class simulation
-class WPDB_Simulation {
+class WP_DB_Simulator {
+    private $tables = [];
     public $prefix = 'wp_';
-    private $connection = null;
     public $last_error = '';
+    public $last_query = '';
     
     public function __construct() {
-        // For demo purposes, we'll use SQLite for simplicity
-        try {
-            $this->connection = new PDO('sqlite:' . __DIR__ . '/affiliate_portal.db');
-            $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch(PDOException $e) {
-            $this->last_error = $e->getMessage();
-            error_log('Database connection failed: ' . $e->getMessage());
-        }
+        // Initialize with empty tables structure
+        $this->tables = [
+            'affiliate_users' => [],
+            'affiliate_admin' => [],
+            'affiliate_sessions' => [],
+            'affiliate_kyc' => [],
+            'affiliate_email_config' => []
+        ];
+        
+        // Create sample user data for testing KYC workflow
+        $this->tables['affiliate_users'][] = [
+            'id' => 1,
+            'username' => 'testuser',
+            'password' => password_hash('test123', PASSWORD_DEFAULT),
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'type' => 'individual',
+            'status' => 'awaiting approval',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->tables['affiliate_users'][] = [
+            'id' => 2,
+            'username' => 'companyuser',
+            'password' => password_hash('company123', PASSWORD_DEFAULT),
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane.smith@company.com',
+            'type' => 'company',
+            'status' => 'awaiting approval',
+            'company_name' => 'Tech Corp Ltd',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Create sample KYC data for testing
+        $this->tables['affiliate_kyc'][] = [
+            'id' => 1,
+            'user_id' => 1,
+            'account_type' => 'individual',
+            'full_name' => 'John Doe',
+            'email' => 'john.doe@example.com',
+            'mobile_number' => '+1234567890',
+            'nationality' => 'US',
+            'address_line1' => '123 Main Street',
+            'city' => 'New York',
+            'country' => 'United States',
+            'post_code' => '10001',
+            'kyc_status' => 'pending',
+            'submitted_at' => date('Y-m-d H:i:s'),
+            'identity_document_type' => 'passport',
+            'identity_document_number' => 'US123456789'
+        ];
+        
+        $this->tables['affiliate_kyc'][] = [
+            'id' => 2,
+            'user_id' => 2,
+            'account_type' => 'company',
+            'full_company_name' => 'Tech Corp Ltd',
+            'business_contact_name' => 'Jane Smith',
+            'business_email' => 'jane.smith@company.com',
+            'company_registration_no' => 'TC123456',
+            'kyc_status' => 'pending',
+            'submitted_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Create default admin user for testing
+        $this->tables['affiliate_admin'][] = [
+            'id' => 1,
+            'username' => 'admin',
+            'password' => password_hash('admin123', PASSWORD_DEFAULT),
+            'email' => 'admin@example.com',
+            'full_name' => 'System Administrator',
+            'role' => 'admin',
+            'status' => 'active',
+            'last_login' => null,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
     }
     
     public function get_charset_collate() {
-        return '';
+        return 'DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci';
     }
     
     public function prepare($query, ...$args) {
-        if (empty($args)) {
-            return $query;
-        }
+        // Simple parameter replacement for basic queries
+        $this->last_query = $query;
         
-        // Simple prepare simulation
-        $prepared = $query;
         foreach ($args as $arg) {
             if (is_string($arg)) {
-                $arg = $this->connection ? $this->connection->quote($arg) : "'" . addslashes($arg) . "'";
-            } elseif (is_int($arg)) {
-                $arg = intval($arg);
+                $arg = "'" . addslashes($arg) . "'";
             } elseif (is_null($arg)) {
                 $arg = 'NULL';
             }
-            $prepared = preg_replace('/(%s|%d|%f)/', $arg, $prepared, 1);
+            $query = preg_replace('/%[sd]/', $arg, $query, 1);
         }
         
-        return $prepared;
+        return $query;
     }
     
-    public function query($query) {
-        if (!$this->connection) {
-            $this->last_error = 'No database connection';
-            return false;
+    public function get_row($query, $output = OBJECT) {
+        $this->last_query = $query;
+        
+        // Parse table name from query
+        if (preg_match('/FROM\s+`?(\w+)`?/i', $query, $matches)) {
+            $table_name = str_replace($this->prefix, '', $matches[1]);
+            
+            if (isset($this->tables[$table_name])) {
+                // Enhanced WHERE clause parsing for multiple conditions
+                if (preg_match('/WHERE\s+(.+?)(?:\s+ORDER\s+BY|\s+LIMIT|\s*$)/i', $query, $where_matches)) {
+                    $where_clause = $where_matches[1];
+                    
+                    foreach ($this->tables[$table_name] as $row) {
+                        if ($this->evaluate_where_clause($row, $where_clause)) {
+                            return (object) $row;
+                        }
+                    }
+                }
+                
+                // Return first row if no WHERE clause
+                if (!empty($this->tables[$table_name])) {
+                    return (object) $this->tables[$table_name][0];
+                }
+            }
         }
         
-        try {
-            $result = $this->connection->query($query);
-            return $result;
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            error_log('Database query failed: ' . $e->getMessage());
-            return false;
-        }
+        return null;
     }
     
-    public function get_row($query) {
-        if (!$this->connection) {
-            return null;
+    private function evaluate_where_clause($row, $where_clause) {
+        // Handle multiple conditions with AND
+        $conditions = preg_split('/\s+AND\s+/i', $where_clause);
+        
+        foreach ($conditions as $condition) {
+            if (preg_match('/(\w+)\s*=\s*[\'"]?([^\'"]*)[\'"]?/i', trim($condition), $matches)) {
+                $field = $matches[1];
+                $value = $matches[2];
+                
+                if (!isset($row[$field]) || $row[$field] != $value) {
+                    return false;
+                }
+            }
         }
         
-        try {
-            $stmt = $this->connection->query($query);
-            return $stmt ? $stmt->fetchObject() : null;
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return null;
-        }
+        return true;
     }
     
-    public function get_results($query) {
-        if (!$this->connection) {
-            return [];
+    public function get_results($query, $output = OBJECT) {
+        $this->last_query = $query;
+        
+        if (preg_match('/FROM\s+`?(\w+)`?/i', $query, $matches)) {
+            $table_name = str_replace($this->prefix, '', $matches[1]);
+            
+            if (isset($this->tables[$table_name])) {
+                $results = [];
+                foreach ($this->tables[$table_name] as $row) {
+                    $results[] = (object) $row;
+                }
+                return $results;
+            }
         }
         
-        try {
-            $stmt = $this->connection->query($query);
-            return $stmt ? $stmt->fetchAll(PDO::FETCH_OBJ) : [];
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return [];
-        }
+        return [];
     }
     
     public function get_var($query) {
-        if (!$this->connection) {
-            return null;
+        $this->last_query = $query;
+        
+        // Handle SHOW TABLES queries
+        if (preg_match('/SHOW TABLES LIKE\s+[\'"](\w+)[\'"]/i', $query, $matches)) {
+            $table_name = str_replace($this->prefix, '', $matches[1]);
+            return isset($this->tables[$table_name]) ? $this->prefix . $table_name : null;
         }
         
-        try {
-            $stmt = $this->connection->query($query);
-            return $stmt ? $stmt->fetchColumn() : null;
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return null;
+        // Handle COUNT queries
+        if (preg_match('/SELECT COUNT/i', $query)) {
+            if (preg_match('/FROM\s+`?(\w+)`?/i', $query, $matches)) {
+                $table_name = str_replace($this->prefix, '', $matches[1]);
+                return isset($this->tables[$table_name]) ? count($this->tables[$table_name]) : 0;
+            }
         }
+        
+        return null;
     }
     
     public function insert($table, $data, $format = null) {
-        if (!$this->connection) {
-            return false;
+        $table_name = str_replace($this->prefix, '', $table);
+        
+        if (!isset($this->tables[$table_name])) {
+            $this->tables[$table_name] = [];
         }
         
-        $columns = implode(', ', array_keys($data));
-        $placeholders = ':' . implode(', :', array_keys($data));
-        
-        $query = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
-        
-        try {
-            $stmt = $this->connection->prepare($query);
-            return $stmt->execute($data);
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return false;
+        // Generate ID if not provided
+        if (!isset($data['id'])) {
+            $max_id = 0;
+            foreach ($this->tables[$table_name] as $row) {
+                if (isset($row['id']) && $row['id'] > $max_id) {
+                    $max_id = $row['id'];
+                }
+            }
+            $data['id'] = $max_id + 1;
         }
+        
+        // Add timestamps if not provided
+        if (!isset($data['created_at'])) {
+            $data['created_at'] = date('Y-m-d H:i:s');
+        }
+        
+        $this->tables[$table_name][] = $data;
+        return true;
     }
     
-    public function update($table, $data, $where, $data_format = null, $where_format = null) {
-        if (!$this->connection) {
+    public function update($table, $data, $where, $format = null, $where_format = null) {
+        $table_name = str_replace($this->prefix, '', $table);
+        
+        if (!isset($this->tables[$table_name])) {
             return false;
         }
         
-        $set_clause = [];
-        foreach ($data as $column => $value) {
-            $set_clause[] = "{$column} = :{$column}";
+        $updated = false;
+        foreach ($this->tables[$table_name] as &$row) {
+            $match = true;
+            foreach ($where as $field => $value) {
+                if (!isset($row[$field]) || $row[$field] != $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            
+            if ($match) {
+                foreach ($data as $field => $value) {
+                    $row[$field] = $value;
+                }
+                if (!isset($data['updated_at'])) {
+                    $row['updated_at'] = date('Y-m-d H:i:s');
+                }
+                $updated = true;
+            }
         }
-        $set_clause = implode(', ', $set_clause);
         
-        $where_clause = [];
-        foreach ($where as $column => $value) {
-            $where_clause[] = "{$column} = :where_{$column}";
-            $data["where_{$column}"] = $value;
-        }
-        $where_clause = implode(' AND ', $where_clause);
-        
-        $query = "UPDATE {$table} SET {$set_clause} WHERE {$where_clause}";
-        
-        try {
-            $stmt = $this->connection->prepare($query);
-            return $stmt->execute($data);
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return false;
-        }
+        return $updated;
     }
     
     public function delete($table, $where, $where_format = null) {
-        if (!$this->connection) {
+        $table_name = str_replace($this->prefix, '', $table);
+        
+        if (!isset($this->tables[$table_name])) {
             return false;
         }
         
-        $where_clause = [];
-        $data = [];
-        foreach ($where as $column => $value) {
-            $where_clause[] = "{$column} = :{$column}";
-            $data[$column] = $value;
+        $deleted = false;
+        foreach ($this->tables[$table_name] as $key => $row) {
+            $match = true;
+            foreach ($where as $field => $value) {
+                if (!isset($row[$field]) || $row[$field] != $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            
+            if ($match) {
+                unset($this->tables[$table_name][$key]);
+                $deleted = true;
+            }
         }
-        $where_clause = implode(' AND ', $where_clause);
         
-        $query = "DELETE FROM {$table} WHERE {$where_clause}";
+        // Re-index array
+        $this->tables[$table_name] = array_values($this->tables[$table_name]);
         
-        try {
-            $stmt = $this->connection->prepare($query);
-            return $stmt->execute($data);
-        } catch (PDOException $e) {
-            $this->last_error = $e->getMessage();
-            return false;
+        return $deleted;
+    }
+    
+    public function query($sql) {
+        $this->last_query = $sql;
+        
+        // Handle CREATE TABLE statements
+        if (preg_match('/CREATE TABLE\s+(?:IF NOT EXISTS\s+)?`?(\w+)`?/i', $sql, $matches)) {
+            $table_name = str_replace($this->prefix, '', $matches[1]);
+            if (!isset($this->tables[$table_name])) {
+                $this->tables[$table_name] = [];
+            }
+            return true;
         }
+        
+        // Handle DELETE statements
+        if (preg_match('/DELETE FROM\s+`?(\w+)`?/i', $sql, $matches)) {
+            $table_name = str_replace($this->prefix, '', $matches[1]);
+            if (isset($this->tables[$table_name])) {
+                $this->tables[$table_name] = [];
+            }
+            return true;
+        }
+        
+        // Handle INSERT statements
+        if (preg_match('/INSERT INTO\s+`?(\w+)`?/i', $sql, $matches)) {
+            return true; // Simplified for basic functionality
+        }
+        
+        return true;
+    }
+    
+    public function flush() {
+        // Simulate cache flush
+        return true;
     }
 }
 
-// Create global database object
-$wpdb = new WPDB_Simulation();
+// Create global wpdb instance
+if (!isset($wpdb)) {
+    $wpdb = new WP_DB_Simulator();
+    $wpdb->prefix = 'wp_';
+}
+
+// Set global variable for affiliate portal
 $affiliate_db = $wpdb;
 
-// WordPress-like functions for compatibility
+// Required WordPress functions for database operations
 if (!function_exists('dbDelta')) {
     function dbDelta($queries) {
         global $wpdb;
         
         if (is_string($queries)) {
-            $queries = explode(';', $queries);
+            $queries = [$queries];
         }
         
+        $results = [];
         foreach ($queries as $query) {
-            $query = trim($query);
-            if (!empty($query)) {
-                $wpdb->query($query);
-            }
+            $result = $wpdb->query($query);
+            $results[] = $result ? 'Table created successfully' : 'Table creation failed';
         }
+        
+        return $results;
     }
 }
 
+// WordPress time functions
 if (!function_exists('current_time')) {
     function current_time($type = 'mysql') {
-        if ($type === 'mysql') {
-            return date('Y-m-d H:i:s');
-        }
-        return time();
+        return date('Y-m-d H:i:s');
     }
 }
 
-if (!function_exists('is_ssl')) {
-    function is_ssl() {
-        return isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+// WordPress options functions
+if (!function_exists('get_option')) {
+    function get_option($option, $default = false) {
+        return $default;
     }
 }
 
+if (!function_exists('update_option')) {
+    function update_option($option, $value) {
+        return true;
+    }
+}
+
+// WordPress URL functions
 if (!function_exists('admin_url')) {
     function admin_url($path = '') {
-        // In standalone mode, route AJAX requests to our ajax-handler.php
         if ($path === 'admin-ajax.php') {
             return '/ajax-handler.php';
         }
@@ -245,14 +383,116 @@ if (!function_exists('admin_url')) {
 
 if (!function_exists('get_permalink')) {
     function get_permalink($post = 0) {
-        // Mock permalink function for standalone mode
         return '/';
     }
 }
 
 if (!function_exists('get_page_by_title')) {
     function get_page_by_title($title) {
-        // Mock function to return a dummy page object
         return (object) array('ID' => 1);
     }
 }
+
+if (!function_exists('get_page_by_path')) {
+    function get_page_by_path($path) {
+        return (object) array('ID' => 1);
+    }
+}
+
+// WordPress plugin functions
+if (!function_exists('plugin_dir_url')) {
+    function plugin_dir_url($file) {
+        return '/assets/';
+    }
+}
+
+if (!function_exists('plugin_dir_path')) {
+    function plugin_dir_path($file) {
+        return __DIR__ . '/';
+    }
+}
+
+// WordPress action/hook system
+if (!function_exists('add_action')) {
+    function add_action($hook, $callback, $priority = 10, $args = 1) {
+        // Mock action system
+    }
+}
+
+if (!function_exists('add_shortcode')) {
+    function add_shortcode($tag, $callback) {
+        // Mock shortcode system
+    }
+}
+
+if (!function_exists('do_shortcode')) {
+    function do_shortcode($content) {
+        return $content;
+    }
+}
+
+if (!function_exists('wp_enqueue_scripts')) {
+    function wp_enqueue_scripts() {
+        // Mock script enqueue
+    }
+}
+
+// WordPress file functions
+if (!function_exists('wp_mkdir_p')) {
+    function wp_mkdir_p($target) {
+        if (!is_dir($target)) {
+            return mkdir($target, 0755, true);
+        }
+        return true;
+    }
+}
+
+// WordPress cache functions
+if (!function_exists('wp_cache_delete')) {
+    function wp_cache_delete($key, $group = '') {
+        return true;
+    }
+}
+
+if (!function_exists('wp_cache_flush')) {
+    function wp_cache_flush() {
+        return true;
+    }
+}
+
+// WordPress SSL detection
+if (!function_exists('is_ssl')) {
+    function is_ssl() {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+            || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    }
+}
+
+// WordPress upgrade functions
+if (!defined('ABSPATH')) {
+    define('ABSPATH', __DIR__ . '/');
+}
+
+if (!file_exists(ABSPATH . 'wp-admin/includes/upgrade.php')) {
+    // Create mock upgrade.php
+    $upgrade_dir = ABSPATH . 'wp-admin/includes';
+    if (!is_dir($upgrade_dir)) {
+        mkdir($upgrade_dir, 0755, true);
+    }
+    
+    if (!file_exists($upgrade_dir . '/upgrade.php')) {
+        file_put_contents($upgrade_dir . '/upgrade.php', '<?php
+// Mock WordPress upgrade.php for standalone operation
+if (!function_exists("dbDelta")) {
+    function dbDelta($queries) {
+        // Already defined in database.php
+        return [];
+    }
+}
+');
+    }
+}
+
+error_log('Database simulation initialized successfully');
+?>

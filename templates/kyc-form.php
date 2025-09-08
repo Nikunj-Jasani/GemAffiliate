@@ -1001,7 +1001,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function submitForm(action) {
         const formData = new FormData(kycForm);
+        
+        // Set the correct AJAX action based on whether it's draft or submit
+        if (action === 'draft') {
+            formData.append('action', 'affiliate_save_kyc_draft');
+        } else {
+            formData.append('action', 'affiliate_submit_kyc');
+        }
+        
         formData.append('kyc_action', action);
+        formData.append('nonce', window.affiliate_ajax?.nonce || 'standalone_nonce');
 
         // Show loading state
         const originalText = action === 'draft' ? 'Save as Draft' : 'Submit KYC Application';

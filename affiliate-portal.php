@@ -3793,11 +3793,13 @@ class AffiliatePortal {
         }
         
         // Check if user is logged in
-        $user_id = $this->get_current_user_id();
-        if (!$user_id) {
+        $auth_data = $this->is_user_authenticated();
+        if (!$auth_data) {
             wp_send_json_error('User not logged in');
             return;
         }
+        
+        $user_id = $auth_data['user_id'];
         
         // Ensure KYC table exists before attempting to save data
         if (!$this->ensure_kyc_table_exists()) {
@@ -4144,6 +4146,143 @@ class AffiliatePortal {
             }
             
             $error_message = $is_portuguese ? 'Falha ao salvar dados KYC' : 'Failed to save KYC data';
+            wp_send_json_error($error_message);
+        }
+    }
+    
+    public function handle_kyc_draft_save() {
+        if (!wp_verify_nonce($_POST['nonce'], 'affiliate_nonce')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+        
+        // Check if user is logged in
+        $auth_data = $this->is_user_authenticated();
+        if (!$auth_data) {
+            wp_send_json_error('User not logged in');
+            return;
+        }
+        
+        $user_id = $auth_data['user_id'];
+        
+        // Ensure KYC table exists before attempting to save data
+        if (!$this->ensure_kyc_table_exists()) {
+            wp_send_json_error('Database table not available. Please contact administrator.');
+            return;
+        }
+        
+        global $wpdb;
+        
+        // Get account type to determine which fields to process
+        $account_type = sanitize_text_field($_POST['account_type']);
+        
+        // Prepare data for the new KYC table structure
+        $kyc_data = array(
+            'user_id' => $user_id,
+            'account_type' => $account_type,
+            'kyc_status' => 'draft',
+            'submitted_at' => current_time('mysql')
+        );
+
+        // Handle individual form fields
+        $individual_fields = ['full_name', 'date_of_birth', 'email', 'nationality', 'mobile_number', 'affiliate_type', 
+                             'address_line1', 'address_line2', 'city', 'country', 'post_code'];
+        
+        foreach ($individual_fields as $field) {
+            if (isset($_POST[$field])) {
+                if ($field === 'email') {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
+        }
+        
+        // Handle company contact fields
+        $company_contact_fields = ['business_contact_name', 'job_title', 'business_email', 'business_telephone'];
+        
+        foreach ($company_contact_fields as $field) {
+            if (isset($_POST[$field])) {
+                if ($field === 'business_email') {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
+        }
+        
+        // Handle company detail fields  
+        $company_fields = ['full_company_name', 'trading_name', 'company_type', 'type_of_business', 
+                          'company_registration_no', 'company_email', 'company_telephone',
+                          'company_address_line1', 'company_address_line2', 'company_city', 
+                          'company_country', 'company_post_code'];
+        
+        foreach ($company_fields as $field) {
+            if (isset($_POST[$field])) {
+                if (strpos($field, 'email') !== false) {
+                    $kyc_data[$field] = sanitize_email($_POST[$field]);
+                } else {
+                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
+                }
+            }
+        }
+        
+        if (isset($_POST['affiliate_sites'])) {
+            $kyc_data['affiliate_sites'] = sanitize_textarea_field($_POST['affiliate_sites']);
+        }
+        
+        // Additional KYC fields
+        if (isset($_POST['identity_document_type'])) {
+            $kyc_data['identity_document_type'] = sanitize_text_field($_POST['identity_document_type']);
+        }
+        if (isset($_POST['identity_document_number'])) {
+            $kyc_data['identity_document_number'] = sanitize_text_field($_POST['identity_document_number']);
+        }
+        
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        // Check if KYC record already exists
+        $existing_kyc = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $kyc_table WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if ($existing_kyc) {
+            // Update existing record
+            $result = $wpdb->update(
+                $kyc_table,
+                $kyc_data,
+                array('user_id' => $user_id)
+            );
+        } else {
+            // Insert new record
+            $result = $wpdb->insert($kyc_table, $kyc_data);
+        }
+        
+        if ($result !== false) {
+            // Send success message based on language context
+            $is_portuguese = false;
+            if (isset($_SERVER['HTTP_REFERER'])) {
+                $referrer = $_SERVER['HTTP_REFERER'];
+                if (strpos($referrer, 'afiliado') !== false || strpos($referrer, 'pt') !== false) {
+                    $is_portuguese = true;
+                }
+            }
+            
+            $message = $is_portuguese ? 'Rascunho salvo com sucesso' : 'Draft saved successfully';
+            wp_send_json_success($message);
+        } else {
+            error_log('KYC draft save failed: ' . $wpdb->last_error);
+            
+            $is_portuguese = false;
+            if (isset($_SERVER['HTTP_REFERER'])) {
+                $referrer = $_SERVER['HTTP_REFERER'];
+                if (strpos($referrer, 'afiliado') !== false || strpos($referrer, 'pt') !== false) {
+                    $is_portuguese = true;
+                }
+            }
+            
+            $error_message = $is_portuguese ? 'Falha ao salvar rascunho' : 'Failed to save draft';
             wp_send_json_error($error_message);
         }
     }
