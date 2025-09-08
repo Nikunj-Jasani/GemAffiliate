@@ -11,13 +11,155 @@
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
-    exit;
+    // Handle standalone mode requests
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        // Start session if not already started
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Include database and WordPress simulation functions
+        require_once 'database.php';
+        
+        // Include WordPress simulation functions
+        if (!function_exists('wp_send_json_success')) {
+            function wp_send_json_success($data = null) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => true, 'data' => $data));
+                exit;
+            }
+        }
+        
+        if (!function_exists('wp_send_json_error')) {
+            function wp_send_json_error($data = null) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => false, 'data' => $data));
+                exit;
+            }
+        }
+        
+        if (!function_exists('sanitize_text_field')) {
+            function sanitize_text_field($str) {
+                return htmlspecialchars(strip_tags(trim($str)), ENT_QUOTES, 'UTF-8');
+            }
+        }
+        
+        if (!function_exists('sanitize_email')) {
+            function sanitize_email($email) {
+                return filter_var($email, FILTER_SANITIZE_EMAIL);
+            }
+        }
+        
+        if (!function_exists('sanitize_textarea_field')) {
+            function sanitize_textarea_field($str) {
+                return htmlspecialchars(strip_tags($str), ENT_QUOTES, 'UTF-8');
+            }
+        }
+        
+        if (!function_exists('wp_verify_nonce')) {
+            function wp_verify_nonce($nonce, $action = -1) {
+                return true; // For development, bypassing nonce verification
+            }
+        }
+        
+        if (!function_exists('current_time')) {
+            function current_time($type = 'mysql') {
+                return date('Y-m-d H:i:s');
+            }
+        }
+        
+        if (!function_exists('add_action')) {
+            function add_action($hook, $callback, $priority = 10, $args = 1) {
+                // Mock action system for standalone mode
+            }
+        }
+        
+        if (!function_exists('add_shortcode')) {
+            function add_shortcode($tag, $callback) {
+                // Mock shortcode system for standalone mode
+            }
+        }
+        
+        if (!function_exists('register_activation_hook')) {
+            function register_activation_hook($file, $callback) {
+                // Mock activation hook for standalone mode
+            }
+        }
+        
+        if (!function_exists('register_deactivation_hook')) {
+            function register_deactivation_hook($file, $callback) {
+                // Mock deactivation hook for standalone mode
+            }
+        }
+        
+        if (!function_exists('plugin_dir_url')) {
+            function plugin_dir_url($file) {
+                return '/assets/';
+            }
+        }
+        
+        if (!function_exists('plugin_dir_path')) {
+            function plugin_dir_path($file) {
+                return __DIR__ . '/';
+            }
+        }
+        
+        if (!function_exists('wp_enqueue_scripts')) {
+            function wp_enqueue_scripts() {
+                // Mock script enqueue for standalone mode
+            }
+        }
+        
+        if (!function_exists('get_option')) {
+            function get_option($option, $default = false) {
+                return $default;
+            }
+        }
+        
+        if (!function_exists('update_option')) {
+            function update_option($option, $value) {
+                return true;
+            }
+        }
+        
+        // Define necessary constants for standalone mode
+        if (!defined('ABSPATH')) {
+            define('ABSPATH', __DIR__ . '/');
+        }
+        if (!defined('AFFILIATE_PORTAL_URL')) {
+            define('AFFILIATE_PORTAL_URL', '/');
+        }
+        if (!defined('AFFILIATE_PORTAL_PATH')) {
+            define('AFFILIATE_PORTAL_PATH', __DIR__ . '/');
+        }
+        if (!defined('AFFILIATE_PORTAL_VERSION')) {
+            define('AFFILIATE_PORTAL_VERSION', '1.3.0');
+        }
+        
+        // Handle the request after class definition
+        add_action('init', 'handle_standalone_request');
+        function handle_standalone_request() {
+            $action = sanitize_text_field($_POST['action']);
+            if ($action === 'affiliate_submit_kyc') {
+                $affiliate_portal = new AffiliatePortal();
+                $affiliate_portal->handle_kyc_submission();
+            }
+        }
+    } else {
+        exit;
+    }
 }
 
-// Define plugin constants
-define('AFFILIATE_PORTAL_URL', plugin_dir_url(__FILE__));
-define('AFFILIATE_PORTAL_PATH', plugin_dir_path(__FILE__));
-define('AFFILIATE_PORTAL_VERSION', '1.3.0');
+// Define plugin constants if not already defined
+if (!defined('AFFILIATE_PORTAL_URL')) {
+    define('AFFILIATE_PORTAL_URL', plugin_dir_url(__FILE__));
+}
+if (!defined('AFFILIATE_PORTAL_PATH')) {
+    define('AFFILIATE_PORTAL_PATH', plugin_dir_path(__FILE__));
+}
+if (!defined('AFFILIATE_PORTAL_VERSION')) {
+    define('AFFILIATE_PORTAL_VERSION', '1.3.0');
+}
 
 class AffiliatePortal {
     
@@ -5001,4 +5143,9 @@ GEM AFFILIATE Team
 // Initialize the plugin
 global $affiliate_portal_instance;
 $affiliate_portal_instance = new AffiliatePortal();
+
+// Handle standalone POST requests for KYC submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'affiliate_submit_kyc') {
+    $affiliate_portal_instance->handle_kyc_submission();
+}
 ?>

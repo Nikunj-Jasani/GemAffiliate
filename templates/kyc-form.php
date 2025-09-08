@@ -747,15 +747,15 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                             $directors_array = json_decode($directors, true) ?: [];
                             foreach ($directors_array as $index => $director) {
                                 echo '<div class="director-item">
-                                        <input type="text" name="directors[' . $index . '][name]" value="' . esc_attr($director['name'] ?? '') . '" placeholder="Director Name" required>
-                                        <input type="text" name="directors[' . $index . '][position]" value="' . esc_attr($director['position'] ?? '') . '" placeholder="Position" required>
+                                        <input type="text" name="directors[' . $index . '][name]" value="' . esc_attr($director['name'] ?? '') . '" placeholder="Director Name" ' . (!$is_individual ? 'required' : '') . '>
+                                        <input type="text" name="directors[' . $index . '][position]" value="' . esc_attr($director['position'] ?? '') . '" placeholder="Position" ' . (!$is_individual ? 'required' : '') . '>
                                         <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
                                       </div>';
                             }
                         } else {
                             echo '<div class="director-item">
-                                    <input type="text" name="directors[0][name]" placeholder="Director Name" required>
-                                    <input type="text" name="directors[0][position]" placeholder="Position" required>
+                                    <input type="text" name="directors[0][name]" placeholder="Director Name" ' . (!$is_individual ? 'required' : '') . '>
+                                    <input type="text" name="directors[0][position]" placeholder="Position" ' . (!$is_individual ? 'required' : '') . '>
                                     <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
                                   </div>';
                         }
@@ -787,7 +787,7 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                                             <div class="kyc-upload-subtext">Passport, Driver\'s License, National ID</div>
                                         </div>
                                         <input type="file" id="director_doc_' . $index . '" name="director_documents[' . $index . ']" style="display: none;" 
-                                               accept=".pdf,.jpg,.jpeg,.png" required>
+                                               accept=".pdf,.jpg,.jpeg,.png" ' . (!$is_individual ? 'required' : '') . '>
                                         <div id="director_doc_' . $index . '_preview"></div>
                                       </div>';
                             }
@@ -805,7 +805,7 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                                         <div class="kyc-upload-subtext">Passport, Driver\'s License, National ID</div>
                                     </div>
                                     <input type="file" id="director_doc_0" name="director_documents[0]" style="display: none;" 
-                                           accept=".pdf,.jpg,.jpeg,.png" required>
+                                           accept=".pdf,.jpg,.jpeg,.png" ' . (!$is_individual ? 'required' : '') . '>
                                     <div id="director_doc_0_preview"></div>
                                   </div>';
                         }
@@ -822,15 +822,15 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                             $shareholders_array = json_decode($shareholders, true) ?: [];
                             foreach ($shareholders_array as $index => $shareholder) {
                                 echo '<div class="shareholder-item">
-                                        <input type="text" name="shareholders[' . $index . '][name]" value="' . esc_attr($shareholder['name'] ?? '') . '" placeholder="Shareholder Name" required>
-                                        <input type="number" name="shareholders[' . $index . '][percentage]" value="' . esc_attr($shareholder['percentage'] ?? '') . '" placeholder="%" min="0" max="100" step="0.01" required>
+                                        <input type="text" name="shareholders[' . $index . '][name]" value="' . esc_attr($shareholder['name'] ?? '') . '" placeholder="Shareholder Name" ' . (!$is_individual ? 'required' : '') . '>
+                                        <input type="number" name="shareholders[' . $index . '][percentage]" value="' . esc_attr($shareholder['percentage'] ?? '') . '" placeholder="%" min="0" max="100" step="0.01" ' . (!$is_individual ? 'required' : '') . '>
                                         <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
                                       </div>';
                             }
                         } else {
                             echo '<div class="shareholder-item">
-                                    <input type="text" name="shareholders[0][name]" placeholder="Shareholder Name" required>
-                                    <input type="number" name="shareholders[0][percentage]" placeholder="%" min="0" max="100" step="0.01" required>
+                                    <input type="text" name="shareholders[0][name]" placeholder="Shareholder Name" ' . (!$is_individual ? 'required' : '') . '>
+                                    <input type="number" name="shareholders[0][percentage]" placeholder="%" min="0" max="100" step="0.01" ' . (!$is_individual ? 'required' : '') . '>
                                     <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
                                   </div>';
                         }
@@ -1206,6 +1206,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Directors and Shareholders Management Functions
 let directorCount = <?php echo count(json_decode($form_data->list_of_directors ?? '[]', true) ?: [1]); ?>;
 let shareholderCount = <?php echo count(json_decode($form_data->list_of_shareholders ?? '[]', true) ?: [1]); ?>;
+const isIndividual = <?php echo $is_individual ? 'true' : 'false'; ?>;
 
 function addDirector() {
     const container = document.getElementById('directors-container');
@@ -1215,8 +1216,8 @@ function addDirector() {
     const directorItem = document.createElement('div');
     directorItem.className = 'director-item';
     directorItem.innerHTML = `
-        <input type="text" name="directors[${directorCount}][name]" placeholder="Director Name" required onchange="updateDirectorDocumentLabel(${directorCount})">
-        <input type="text" name="directors[${directorCount}][position]" placeholder="Position" required onchange="updateDirectorDocumentLabel(${directorCount})">
+        <input type="text" name="directors[${directorCount}][name]" placeholder="Director Name" ${!isIndividual ? 'required' : ''} onchange="updateDirectorDocumentLabel(${directorCount})">
+        <input type="text" name="directors[${directorCount}][position]" placeholder="Position" ${!isIndividual ? 'required' : ''} onchange="updateDirectorDocumentLabel(${directorCount})">
         <button type="button" class="remove-item-btn" onclick="removeDirector(this)">×</button>
     `;
     container.appendChild(directorItem);
@@ -1238,7 +1239,7 @@ function addDirector() {
             <div class="kyc-upload-subtext">Passport, Driver's License, National ID</div>
         </div>
         <input type="file" id="director_doc_${directorCount}" name="director_documents[${directorCount}]" style="display: none;" 
-               accept=".pdf,.jpg,.jpeg,.png" required>
+               accept=".pdf,.jpg,.jpeg,.png" ${!isIndividual ? 'required' : ''}>
         <div id="director_doc_${directorCount}_preview"></div>
     `;
     docContainer.appendChild(docItem);
@@ -1286,8 +1287,8 @@ function addShareholder() {
     const shareholderItem = document.createElement('div');
     shareholderItem.className = 'shareholder-item';
     shareholderItem.innerHTML = `
-        <input type="text" name="shareholders[${shareholderCount}][name]" placeholder="Shareholder Name" required>
-        <input type="number" name="shareholders[${shareholderCount}][percentage]" placeholder="%" min="0" max="100" step="0.01" required>
+        <input type="text" name="shareholders[${shareholderCount}][name]" placeholder="Shareholder Name" ${!isIndividual ? 'required' : ''}>
+        <input type="number" name="shareholders[${shareholderCount}][percentage]" placeholder="%" min="0" max="100" step="0.01" ${!isIndividual ? 'required' : ''}>
         <button type="button" class="remove-item-btn" onclick="removeShareholder(this)">×</button>
     `;
     container.appendChild(shareholderItem);

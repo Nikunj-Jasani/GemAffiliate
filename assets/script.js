@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', function() {
         initLoginForm();
     }
     
+    // KYC form functionality
+    const kycForm = document.getElementById('kycForm');
+    if (kycForm) {
+        initKycForm();
+    }
+    
     // Form validation
     initFormValidation();
     
@@ -245,6 +251,15 @@ function initMultiStepForm() {
         let isValid = true;
         
         requiredFields.forEach(field => {
+            // Skip validation for hidden fields or fields in hidden sections
+            if (field.style.display === 'none' || 
+                field.offsetParent === null ||
+                field.closest('.director-item')?.style.display === 'none' ||
+                field.closest('.shareholder-item')?.style.display === 'none' ||
+                field.closest('[style*="display: none"]')) {
+                return;
+            }
+            
             if (!field.value.trim()) {
                 field.classList.add('is-invalid');
                 isValid = false;
@@ -1704,5 +1719,309 @@ if (document.readyState !== 'loading') {
     
     if (document.querySelector('.affiliate-dashboard-enhanced')) {
         initializeDashboard();
+    }
+}
+
+// KYC Form Functionality
+function initKycForm() {
+    const kycForm = document.getElementById('kycForm');
+    if (!kycForm) return;
+    
+    // Handle save as draft
+    const draftBtn = document.getElementById('saveDraftBtn');
+    if (draftBtn) {
+        draftBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            submitKycForm('draft');
+        });
+    }
+    
+    // Handle submit KYC
+    kycForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitKycForm('submit');
+    });
+}
+
+function submitKycForm(action) {
+    const kycForm = document.getElementById('kycForm');
+    if (!kycForm) return;
+    
+    // Get affiliate type to determine validation
+    const accountTypeElement = document.querySelector('input[name="account_type"]');
+    const affiliateTypeElement = document.querySelector('input[name="affiliate_type"]');
+    const isIndividual = (accountTypeElement && accountTypeElement.value === 'individual') || 
+                        (affiliateTypeElement && affiliateTypeElement.value === 'individual');
+    
+    // Validate form based on affiliate type
+    if (action === 'submit' && !validateKycForm(isIndividual)) {
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = kycForm.querySelector('button[type="submit"]');
+    const draftBtn = document.getElementById('saveDraftBtn');
+    const activeBtn = action === 'draft' ? draftBtn : submitBtn;
+    
+    if (activeBtn) {
+        const originalText = activeBtn.innerHTML;
+        activeBtn.innerHTML = '<svg width="16" height="16" class="spinning" viewBox="0 0 24 24" fill="currentColor"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> ' + (action === 'draft' ? 'Saving Draft...' : 'Submitting...');
+        activeBtn.disabled = true;
+        
+        // Create FormData object
+        const formData = new FormData(kycForm);
+        formData.append('action', 'affiliate_submit_kyc');
+        formData.append('kyc_action', action);
+        formData.append('nonce', window.affiliate_ajax?.nonce || 'standalone_nonce');
+        
+        // Submit via fetch to affiliate-portal.php
+        fetch('affiliate-portal.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showKycMessage(data.data, 'success');
+                if (action === 'submit') {
+                    // Redirect to dashboard on successful submission
+                    setTimeout(() => {
+                        window.location.href = 'templates/dashboard-enhanced.php';
+                    }, 2000);
+                }
+            } else {
+                showKycMessage('Error: ' + (data.data || 'Operation failed. Please try again.'), 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showKycMessage('Operation failed. Please check your connection and try again.', 'danger');
+        })
+        .finally(() => {
+            if (activeBtn) {
+                activeBtn.innerHTML = originalText;
+                activeBtn.disabled = false;
+            }
+        });
+    }
+}
+
+function validateKycForm(isIndividual) {
+    const form = document.getElementById('kycForm');
+    let isValid = true;
+    let firstErrorField = null;
+    
+    // Clear previous validation errors
+    form.querySelectorAll('.is-invalid').forEach(field => {
+        field.classList.remove('is-invalid');
+    });
+    form.querySelectorAll('.invalid-feedback').forEach(error => {
+        error.remove();
+    });
+    
+    // Define required fields based on affiliate type
+    const requiredFields = {
+        individual: [
+            'first_name', 'last_name', 'email', 'phone', 'date_of_birth',
+            'nationality', 'address_line1', 'city', 'country', 'post_code'
+        ],
+        company: [
+            'first_name', 'last_name', 'email', 'phone', 'date_of_birth',
+            'nationality', 'address_line1', 'city', 'country', 'post_code',
+            'business_contact_name', 'job_title', 'business_email', 'business_telephone',
+            'full_company_name', 'trading_name', 'company_type', 'type_of_business',
+            'company_registration_no', 'company_email', 'company_telephone',
+            'company_address_line1', 'company_city', 'company_country', 'company_post_code'
+        ]
+    };
+    
+    const fieldsToValidate = isIndividual ? requiredFields.individual : requiredFields.company;
+    
+    // Validate required fields
+    fieldsToValidate.forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field && field.offsetParent !== null) { // Check if field is visible
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                showKycFieldError(field, 'This field is required');
+                isValid = false;
+                if (!firstErrorField) {
+                    firstErrorField = field;
+                }
+            }
+        }
+    });
+    
+    // Validate email fields
+    const emailFields = ['email', 'business_email', 'company_email'];
+    emailFields.forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field && field.value && field.offsetParent !== null) {
+            if (!isValidEmail(field.value)) {
+                field.classList.add('is-invalid');
+                showKycFieldError(field, 'Please enter a valid email address');
+                isValid = false;
+                if (!firstErrorField) {
+                    firstErrorField = field;
+                }
+            }
+        }
+    });
+    
+    // Validate file uploads
+    const requiredFiles = isIndividual ? 
+        ['identification_document'] : 
+        ['identification_document', 'address_proof'];
+    
+    requiredFiles.forEach(fileName => {
+        const fileInput = form.querySelector(`[name="${fileName}"]`);
+        if (fileInput && fileInput.offsetParent !== null) {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                fileInput.classList.add('is-invalid');
+                showKycFieldError(fileInput, 'This document is required');
+                isValid = false;
+                if (!firstErrorField) {
+                    firstErrorField = fileInput;
+                }
+            }
+        }
+    });
+    
+    // Validate directors for company accounts
+    if (!isIndividual) {
+        const directorItems = form.querySelectorAll('.director-item');
+        if (directorItems.length === 0) {
+            showKycMessage('At least one director is required for company accounts', 'danger');
+            isValid = false;
+        } else {
+            directorItems.forEach((item, index) => {
+                const nameField = item.querySelector(`[name="directors[${index}][name]"]`);
+                const positionField = item.querySelector(`[name="directors[${index}][position]"]`);
+                
+                if (nameField && !nameField.value.trim()) {
+                    nameField.classList.add('is-invalid');
+                    showKycFieldError(nameField, 'Director name is required');
+                    isValid = false;
+                    if (!firstErrorField) {
+                        firstErrorField = nameField;
+                    }
+                }
+                
+                if (positionField && !positionField.value.trim()) {
+                    positionField.classList.add('is-invalid');
+                    showKycFieldError(positionField, 'Director position is required');
+                    isValid = false;
+                    if (!firstErrorField) {
+                        firstErrorField = positionField;
+                    }
+                }
+            });
+        }
+        
+        // Validate shareholders for company accounts
+        const shareholderItems = form.querySelectorAll('.shareholder-item');
+        if (shareholderItems.length === 0) {
+            showKycMessage('At least one shareholder is required for company accounts', 'danger');
+            isValid = false;
+        } else {
+            shareholderItems.forEach((item, index) => {
+                const nameField = item.querySelector(`[name="shareholders[${index}][name]"]`);
+                const percentageField = item.querySelector(`[name="shareholders[${index}][percentage]"]`);
+                
+                if (nameField && !nameField.value.trim()) {
+                    nameField.classList.add('is-invalid');
+                    showKycFieldError(nameField, 'Shareholder name is required');
+                    isValid = false;
+                    if (!firstErrorField) {
+                        firstErrorField = nameField;
+                    }
+                }
+                
+                if (percentageField && !percentageField.value.trim()) {
+                    percentageField.classList.add('is-invalid');
+                    showKycFieldError(percentageField, 'Shareholding percentage is required');
+                    isValid = false;
+                    if (!firstErrorField) {
+                        firstErrorField = percentageField;
+                    }
+                }
+            });
+        }
+    }
+    
+    // Focus first error field
+    if (firstErrorField) {
+        firstErrorField.focus();
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    return isValid;
+}
+
+function showKycFieldError(field, message) {
+    // Remove existing error message
+    const existingError = field.parentNode.querySelector('.invalid-feedback');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    // Create new error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback';
+    errorDiv.style.display = 'block';
+    errorDiv.textContent = message;
+    
+    // Insert after the field
+    field.parentNode.insertBefore(errorDiv, field.nextSibling);
+}
+
+function showKycMessage(message, type) {
+    // Remove existing messages
+    const existingMessages = document.querySelectorAll('.alert-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    // Create new message
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type} alert-message`;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInRight 0.3s ease;
+    `;
+    messageDiv.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(messageDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 5000);
+    
+    // Add CSS animation if not exists
+    if (!document.querySelector('#message-animations')) {
+        const style = document.createElement('style');
+        style.id = 'message-animations';
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
 }

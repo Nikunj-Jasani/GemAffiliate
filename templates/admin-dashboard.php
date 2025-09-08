@@ -155,14 +155,13 @@ if (!$admin_data) {
                             <th>Type</th>
                             <th>Country</th>
                             <th>Status</th>
-                            <th>KYC Status</th>
                             <th>Applied Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="applications-tbody">
                         <tr>
-                            <td colspan="8" class="text-center">Loading applications...</td>
+                            <td colspan="7" class="text-center">Loading applications...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1172,6 +1171,131 @@ if (typeof affiliate_ajax === 'undefined') {
         ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>',
         nonce: '<?php echo wp_create_nonce('affiliate_nonce'); ?>'
     };
+}
+
+// Load Applications function (main applications table)
+function loadApplications() {
+    const statusFilter = document.getElementById('status-filter')?.value || '';
+    const perPage = document.getElementById('per-page-filter')?.value || '25';
+    
+    fetch(affiliate_ajax.ajax_url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            action: 'affiliate_get_applications',
+            nonce: affiliate_ajax.nonce,
+            status: statusFilter,
+            per_page: perPage,
+            page: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateApplicationsTable(data.data.applications);
+            updateStatistics(data.data.statistics);
+            updatePagination(data.data.pagination);
+        } else {
+            console.error('Failed to load applications:', data.data);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading applications:', error);
+    });
+}
+
+// Update main applications table
+function updateApplicationsTable(applications) {
+    const tbody = document.getElementById('applications-tbody');
+    if (!tbody) return;
+    
+    if (!applications || applications.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No applications found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = applications.map(app => `
+        <tr>
+            <td><strong>${app.first_name} ${app.last_name}</strong></td>
+            <td>${app.email || 'N/A'}</td>
+            <td>${app.company || 'N/A'}</td>
+            <td><span class="account-type-badge ${app.affiliate_type || 'individual'}">${app.affiliate_type || 'Individual'}</span></td>
+            <td>${app.country || 'N/A'}</td>
+            <td><span class="status-badge ${app.status}">${app.status === 'awaiting approval' && app.user_kyc_status === 'pending' ? 'KYC Pending' : app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span></td>
+            <td>${app.created_at ? new Date(app.created_at).toLocaleDateString() : 'N/A'}</td>
+            <td>
+                <button class="action-btn view" onclick="showKycReviewModal(${app.id})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
+                    </svg>
+                    View
+                </button>
+                <button class="action-btn edit" onclick="editStatus(${app.id}, '${app.status}', '${app.admin_remarks || ''}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                    Edit Status
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update statistics function
+function updateStatistics(stats) {
+    if (stats) {
+        const pendingElement = document.querySelector('.admin-stat[data-stat="pending"] .stat-value');
+        const approvedElement = document.querySelector('.admin-stat[data-stat="approved"] .stat-value');
+        const rejectedElement = document.querySelector('.admin-stat[data-stat="rejected"] .stat-value');
+        
+        if (pendingElement) pendingElement.textContent = stats.pending || 0;
+        if (approvedElement) approvedElement.textContent = stats.approved || 0;
+        if (rejectedElement) rejectedElement.textContent = stats.rejected || 0;
+    }
+}
+
+// Update pagination function
+function updatePagination(pagination) {
+    const container = document.getElementById('pagination-container');
+    if (!container) return;
+    
+    if (pagination && pagination.total_pages > 1) {
+        container.style.display = 'flex';
+        const infoText = document.getElementById('pagination-info-text');
+        if (infoText) {
+            infoText.textContent = `Showing ${pagination.start} to ${pagination.end} of ${pagination.total_records} entries`;
+        }
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// Show KYC Review Modal function
+function showKycReviewModal(userId) {
+    // Fetch user data and KYC information for review
+    const formData = new FormData();
+    formData.append('action', 'affiliate_get_kyc_details');
+    formData.append('user_id', userId);
+    formData.append('nonce', affiliate_ajax.nonce);
+    
+    fetch(affiliate_ajax.ajax_url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showKycModal(data.data);
+        } else {
+            alert('Failed to load KYC details: ' + (data.data || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error loading KYC details:', error);
+        alert('Error loading KYC details');
+    });
 }
 
 // Initialize the admin dashboard when DOM is ready

@@ -65,6 +65,30 @@ function wp_simulate_functions() {
             return true;
         }
     }
+    
+    if (!function_exists('admin_url')) {
+        function admin_url($path = '') {
+            // In standalone mode, route AJAX requests to our ajax-handler.php
+            if ($path === 'admin-ajax.php') {
+                return '/ajax-handler.php';
+            }
+            return '/' . ltrim($path, '/');
+        }
+    }
+    
+    if (!function_exists('get_permalink')) {
+        function get_permalink($post = 0) {
+            // Mock permalink function for standalone mode
+            return '/';
+        }
+    }
+    
+    if (!function_exists('get_page_by_title')) {
+        function get_page_by_title($title) {
+            // Mock function to return a dummy page object
+            return (object) array('ID' => 1);
+        }
+    }
 }
 
 // Initialize mock WordPress functions
