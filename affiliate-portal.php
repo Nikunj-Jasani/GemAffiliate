@@ -2872,23 +2872,26 @@ class AffiliatePortal {
         }
         
         global $wpdb;
-        $table_name = $wpdb->prefix . 'affiliate_users';
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
         
         // Get pagination parameters
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         $per_page = isset($_POST['per_page']) ? max(1, min(100, intval($_POST['per_page']))) : 25;
         $status_filter = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
         
-        // Build WHERE clause
+        // Build WHERE clause for users table
         $where_clause = '';
         $where_args = array();
         if (!empty($status_filter)) {
-            $where_clause = " WHERE status = %s";
+            $where_clause = " WHERE u.status = %s";
             $where_args[] = $status_filter;
         }
         
-        // Get total count for pagination
-        $total_query = "SELECT COUNT(*) FROM $table_name$where_clause";
+        // Get total count for pagination (with JOIN)
+        $total_query = "SELECT COUNT(*) FROM $users_table u 
+                       LEFT JOIN $kyc_table k ON u.id = k.user_id 
+                       $where_clause";
         if (!empty($where_args)) {
             $total_records = $wpdb->get_var($wpdb->prepare($total_query, $where_args));
         } else {
@@ -2899,9 +2902,16 @@ class AffiliatePortal {
         $total_pages = ceil($total_records / $per_page);
         $offset = ($page - 1) * $per_page;
         
-        // Get paginated results
+        // Get paginated results with KYC status
         $limit_clause = $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
-        $applications_query = "SELECT * FROM $table_name$where_clause ORDER BY created_at DESC$limit_clause";
+        $applications_query = "SELECT u.*, 
+                              COALESCE(k.kyc_status, 'not_started') as user_kyc_status,
+                              k.submitted_at as kyc_submitted_at
+                              FROM $users_table u 
+                              LEFT JOIN $kyc_table k ON u.id = k.user_id 
+                              $where_clause 
+                              ORDER BY u.created_at DESC
+                              $limit_clause";
         
         if (!empty($where_args)) {
             $applications = $wpdb->get_results($wpdb->prepare($applications_query, $where_args));

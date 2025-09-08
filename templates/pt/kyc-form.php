@@ -667,7 +667,7 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
         <div class="kyc-form-grid company-fields-section <?php echo !$is_individual ? 'show' : ''; ?>">
             <div class="kyc-form-group">
                 <label class="kyc-form-label required">Certificado de Registro da Empresa</label>
-                <div class="kyc-document-upload" onclick="document.getElementById('company_registration_certificate').click()">
+                <div class="kyc-document-upload" onclick="document.getElementById('company_registration_cert').click()">
                     <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14,2 14,8 20,8"/>
@@ -675,24 +675,24 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                     <div class="kyc-upload-text">Clique para fazer upload ou arraste e solte</div>
                     <div class="kyc-upload-subtext">Documento oficial de registro da empresa</div>
                 </div>
-                <input type="file" id="company_registration_certificate" name="company_registration_certificate" style="display: none;" 
+                <input type="file" id="company_registration_cert" name="company_registration_cert" style="display: none;" 
                        accept=".pdf,.jpg,.jpeg,.png" <?php echo !$is_individual ? 'required' : ''; ?>>
-                <div id="company_registration_certificate_preview"></div>
+                <div id="company_registration_cert_preview"></div>
             </div>
 
             <div class="kyc-form-group">
-                <label class="kyc-form-label required">Licença Comercial</label>
-                <div class="kyc-document-upload" onclick="document.getElementById('business_license').click()">
+                <label class="kyc-form-label required">Comprovante de Endereço da Empresa</label>
+                <div class="kyc-document-upload" onclick="document.getElementById('company_address_proof').click()">
                     <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14,2 14,8 20,8"/>
                     </svg>
                     <div class="kyc-upload-text">Clique para fazer upload ou arraste e solte</div>
-                    <div class="kyc-upload-subtext">Licença para operar o negócio</div>
+                    <div class="kyc-upload-subtext">Conta de luz, água, telefone da empresa</div>
                 </div>
-                <input type="file" id="business_license" name="business_license" style="display: none;" 
+                <input type="file" id="company_address_proof" name="company_address_proof" style="display: none;" 
                        accept=".pdf,.jpg,.jpeg,.png" <?php echo !$is_individual ? 'required' : ''; ?>>
-                <div id="business_license_preview"></div>
+                <div id="company_address_proof_preview"></div>
             </div>
         </div>
 
@@ -725,8 +725,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // File upload handling
     setupFileUpload('address_proof');
     setupFileUpload('identification');
-    setupFileUpload('company_registration_certificate');
-    setupFileUpload('business_license');
+    setupFileUpload('company_registration_cert');
+    setupFileUpload('company_address_proof');
 
     // Save draft functionality
     saveDraftBtn.addEventListener('click', function() {
@@ -907,8 +907,70 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Company-specific validation
+        // Document validation for individual accounts
+        if (accountType === 'individual') {
+            // Check address proof document
+            const addressProofInput = form.querySelector('#address_proof');
+            if (!addressProofInput || !addressProofInput.files.length) {
+                isValid = false;
+                errors.push('Documento de comprovante de endereço é obrigatório');
+                if (addressProofInput && addressProofInput.parentElement) {
+                    addressProofInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Check identification document
+            const identificationInput = form.querySelector('#identification');
+            if (!identificationInput || !identificationInput.files.length) {
+                isValid = false;
+                errors.push('Documento de identificação é obrigatório');
+                if (identificationInput && identificationInput.parentElement) {
+                    identificationInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+        }
+        
+        // Document validation for company accounts
         if (accountType === 'Company') {
+            // Check company registration certificate
+            const companyRegInput = form.querySelector('#company_registration_cert');
+            if (!companyRegInput || !companyRegInput.files.length) {
+                isValid = false;
+                errors.push('Certificado de Registro da Empresa é obrigatório');
+                if (companyRegInput && companyRegInput.parentElement) {
+                    companyRegInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Check business license
+            const companyAddressInput = form.querySelector('#company_address_proof');
+            if (!companyAddressInput || !companyAddressInput.files.length) {
+                isValid = false;
+                errors.push('Comprovante de Endereço da Empresa é obrigatório');
+                if (companyAddressInput && companyAddressInput.parentElement) {
+                    companyAddressInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Individual documents still required for company accounts
+            const addressProofInput = form.querySelector('#address_proof');
+            if (!addressProofInput || !addressProofInput.files.length) {
+                isValid = false;
+                errors.push('Documento pessoal de comprovante de endereço é obrigatório');
+                if (addressProofInput && addressProofInput.parentElement) {
+                    addressProofInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            const identificationInput = form.querySelector('#identification');
+            if (!identificationInput || !identificationInput.files.length) {
+                isValid = false;
+                errors.push('Documento pessoal de identificação é obrigatório');
+                if (identificationInput && identificationInput.parentElement) {
+                    identificationInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
             // Validate shareholders percentage totals
             const shareholderPercentages = form.querySelectorAll('input[name*="shareholders"][name*="percentage"]');
             let totalPercentage = 0;

@@ -871,22 +871,6 @@ $is_individual = strtolower($current_user->type ?? '') !== 'company';
                            accept=".pdf,.jpg,.jpeg,.png" <?php echo !$is_individual ? 'required' : ''; ?>>
                     <div id="company_address_proof_preview"></div>
                 </div>
-                
-                <div class="kyc-form-group">
-                    <label class="kyc-form-label required">Directors' ID Documents</label>
-                    <div class="kyc-document-upload" onclick="document.getElementById('directors_id_docs').click()">
-                        <svg class="kyc-upload-icon" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d;">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                            <line x1="8" y1="21" x2="16" y2="21"/>
-                            <line x1="12" y1="17" x2="12" y2="21"/>
-                        </svg>
-                        <div class="kyc-upload-text">Directors' Identification Documents</div>
-                        <div class="kyc-upload-subtext">Multiple files allowed - ID for each director</div>
-                    </div>
-                    <input type="file" id="directors_id_docs" name="directors_id_docs[]" style="display: none;" 
-                           accept=".pdf,.jpg,.jpeg,.png" multiple <?php echo !$is_individual ? 'required' : ''; ?>>
-                    <div id="directors_id_docs_preview"></div>
-                </div>
             </div>
         </div>
 
@@ -936,7 +920,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (accountType !== 'individual') {
         setupFileUpload('company_registration_cert');
         setupFileUpload('company_address_proof');
-        setupFileUpload('directors_id_docs');
     }
 
     // Save draft functionality
@@ -1031,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ${action === 'draft' ? 'Saving...' : 'Submitting...'}
         `;
 
-        fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        fetch('/ajax-handler.php', {
             method: 'POST',
             body: formData
         })
@@ -1118,8 +1101,70 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Company-specific validation
+        // Document validation for individual accounts
+        if (accountType === 'individual') {
+            // Check address proof document
+            const addressProofInput = form.querySelector('#address_proof');
+            if (!addressProofInput || !addressProofInput.files.length) {
+                isValid = false;
+                errors.push('Address Proof document is required');
+                if (addressProofInput && addressProofInput.parentElement) {
+                    addressProofInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Check identification document
+            const identificationInput = form.querySelector('#identification');
+            if (!identificationInput || !identificationInput.files.length) {
+                isValid = false;
+                errors.push('Identification document is required');
+                if (identificationInput && identificationInput.parentElement) {
+                    identificationInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+        }
+        
+        // Document validation for company accounts
         if (accountType === 'Company') {
+            // Check company registration certificate
+            const companyRegInput = form.querySelector('#company_registration_cert');
+            if (!companyRegInput || !companyRegInput.files.length) {
+                isValid = false;
+                errors.push('Company Registration Certificate is required');
+                if (companyRegInput && companyRegInput.parentElement) {
+                    companyRegInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Check company address proof
+            const companyAddressInput = form.querySelector('#company_address_proof');
+            if (!companyAddressInput || !companyAddressInput.files.length) {
+                isValid = false;
+                errors.push('Company Address Proof is required');
+                if (companyAddressInput && companyAddressInput.parentElement) {
+                    companyAddressInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            // Individual documents still required for company accounts
+            const addressProofInput = form.querySelector('#address_proof');
+            if (!addressProofInput || !addressProofInput.files.length) {
+                isValid = false;
+                errors.push('Personal Address Proof document is required');
+                if (addressProofInput && addressProofInput.parentElement) {
+                    addressProofInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
+            const identificationInput = form.querySelector('#identification');
+            if (!identificationInput || !identificationInput.files.length) {
+                isValid = false;
+                errors.push('Personal Identification document is required');
+                if (identificationInput && identificationInput.parentElement) {
+                    identificationInput.parentElement.style.borderColor = '#dc3545';
+                }
+            }
+            
             // Validate shareholders percentage totals
             const shareholderPercentages = form.querySelectorAll('input[name*="shareholders"][name*="percentage"]');
             let totalPercentage = 0;
