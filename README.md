@@ -147,4 +147,4 @@ affiliate-portal-plugin/
 
 ## License
 
-GPL v2 or later# GemAffiliate
+GPL v2 or later

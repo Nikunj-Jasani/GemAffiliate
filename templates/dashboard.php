@@ -154,6 +154,115 @@ if (!$current_user) {
     </div>
     <?php endif; ?>
     
+    <!-- KYC Status Section -->
+    <?php
+    // Check KYC status for current user - only show if user data is available
+    if ($current_user && isset($current_user->id)) {
+        global $wpdb;
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        $kyc_data = $wpdb->get_row($wpdb->prepare("SELECT * FROM $kyc_table WHERE user_id = %d", $current_user->id));
+        
+        $kyc_status = $kyc_data ? $kyc_data->kyc_status : 'not_started';
+        $account_type = strtolower(trim($current_user->type ?? ''));
+        $is_individual = $account_type !== 'company';
+    ?>
+    <div style="margin-top: 30px;">
+        <div class="affiliate-info-card">
+            <h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+                    <path d="M9,12L11,14L15,10M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"/>
+                </svg>
+                KYC Verification Status
+            </h3>
+            <div class="affiliate-info-item">
+                <span class="affiliate-info-label">Account Type:</span>
+                <span class="affiliate-info-value">
+                    <span class="badge" style="background-color: <?php echo $is_individual ? '#17a2b8' : '#fd7e14'; ?>; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                        <?php echo $is_individual ? 'Individual' : 'Company'; ?>
+                    </span>
+                </span>
+            </div>
+            <div class="affiliate-info-item">
+                <span class="affiliate-info-label">KYC Status:</span>
+                <span class="affiliate-info-value">
+                    <?php
+                    $status_colors = array(
+                        'not_started' => '#6c757d',
+                        'draft' => '#ffc107',
+                        'awaiting approval' => '#007bff',
+                        'approved' => '#28a745',
+                        'rejected' => '#dc3545'
+                    );
+                    $status_color = isset($status_colors[$kyc_status]) ? $status_colors[$kyc_status] : '#6c757d';
+                    ?>
+                    <span class="badge" style="background-color: <?php echo $status_color; ?>; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                        <?php echo esc_html(ucwords(str_replace('_', ' ', $kyc_status))); ?>
+                    </span>
+                </span>
+            </div>
+            
+            <!-- Admin Comments Section -->
+            <?php if (!empty($kyc_data->admin_comments)): ?>
+            <div class="affiliate-info-item" style="grid-column: 1 / -1; margin-top: 15px;">
+                <span class="affiliate-info-label">Admin Comments:</span>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 12px; margin-top: 5px;">
+                    <strong style="color: #856404;">Review Comments:</strong>
+                    <p style="margin: 8px 0 0 0; color: #856404; white-space: pre-wrap;"><?php echo esc_html($kyc_data->admin_comments); ?></p>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if ($kyc_status === 'not_started' || $kyc_status === 'draft'): ?>
+            <div style="margin-top: 15px;">
+                <a href="<?php echo home_url('/affiliate-kyc/'); ?>" class="affiliate-btn affiliate-btn-primary" style="text-decoration: none; display: inline-block;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px;">
+                        <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+                    </svg>
+                    <?php echo $kyc_status === 'draft' ? 'Continue KYC Application' : 'Start KYC Verification'; ?>
+                </a>
+            </div>
+            <?php elseif ($kyc_status === 'awaiting approval'): ?>
+            <div style="margin-top: 15px; padding: 10px; background-color: #e7f3ff; border-left: 4px solid #007bff; border-radius: 4px;">
+                <p style="margin: 0; color: #004085;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; vertical-align: middle;">
+                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z"/>
+                    </svg>
+                    Your <?php echo $is_individual ? 'Individual' : 'Company'; ?> KYC application is under review. We'll notify you once it's processed.
+                </p>
+            </div>
+            <?php elseif ($kyc_status === 'approved'): ?>
+            <div style="margin-top: 15px; padding: 10px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 4px;">
+                <p style="margin: 0; color: #155724;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; vertical-align: middle;">
+                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z"/>
+                    </svg>
+                    Congratulations! Your KYC verification has been approved. Your account is fully verified.
+                </p>
+            </div>
+            <?php elseif ($kyc_status === 'rejected'): ?>
+            <div style="margin-top: 15px; padding: 10px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px;">
+                <p style="margin: 0; color: #721c24;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; vertical-align: middle;">
+                        <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/>
+                    </svg>
+                    Your KYC application was rejected. Please contact support for more information.
+                </p>
+                <?php if ($kyc_data && $kyc_data->admin_notes): ?>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #721c24;">
+                    <strong>Admin Notes:</strong> <?php echo esc_html($kyc_data->admin_notes); ?>
+                </p>
+                <?php endif; ?>
+                <div style="margin-top: 10px;">
+                    <a href="<?php echo home_url('/affiliate-kyc/'); ?>" class="affiliate-btn affiliate-btn-primary" style="text-decoration: none; display: inline-block; font-size: 0.9em;">
+                        Resubmit KYC Application
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php } // End KYC section if user data available ?>
+
     <!-- Quick Stats -->
     <div style="margin-top: 30px;">
         <div class="alert alert-info">

@@ -11,155 +11,13 @@
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
-    // Handle standalone mode requests
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-        // Start session if not already started
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        // Include database and WordPress simulation functions
-        require_once 'database.php';
-        
-        // Include WordPress simulation functions
-        if (!function_exists('wp_send_json_success')) {
-            function wp_send_json_success($data = null) {
-                header('Content-Type: application/json');
-                echo json_encode(array('success' => true, 'data' => $data));
-                exit;
-            }
-        }
-        
-        if (!function_exists('wp_send_json_error')) {
-            function wp_send_json_error($data = null) {
-                header('Content-Type: application/json');
-                echo json_encode(array('success' => false, 'data' => $data));
-                exit;
-            }
-        }
-        
-        if (!function_exists('sanitize_text_field')) {
-            function sanitize_text_field($str) {
-                return htmlspecialchars(strip_tags(trim($str)), ENT_QUOTES, 'UTF-8');
-            }
-        }
-        
-        if (!function_exists('sanitize_email')) {
-            function sanitize_email($email) {
-                return filter_var($email, FILTER_SANITIZE_EMAIL);
-            }
-        }
-        
-        if (!function_exists('sanitize_textarea_field')) {
-            function sanitize_textarea_field($str) {
-                return htmlspecialchars(strip_tags($str), ENT_QUOTES, 'UTF-8');
-            }
-        }
-        
-        if (!function_exists('wp_verify_nonce')) {
-            function wp_verify_nonce($nonce, $action = -1) {
-                return true; // For development, bypassing nonce verification
-            }
-        }
-        
-        if (!function_exists('current_time')) {
-            function current_time($type = 'mysql') {
-                return date('Y-m-d H:i:s');
-            }
-        }
-        
-        if (!function_exists('add_action')) {
-            function add_action($hook, $callback, $priority = 10, $args = 1) {
-                // Mock action system for standalone mode
-            }
-        }
-        
-        if (!function_exists('add_shortcode')) {
-            function add_shortcode($tag, $callback) {
-                // Mock shortcode system for standalone mode
-            }
-        }
-        
-        if (!function_exists('register_activation_hook')) {
-            function register_activation_hook($file, $callback) {
-                // Mock activation hook for standalone mode
-            }
-        }
-        
-        if (!function_exists('register_deactivation_hook')) {
-            function register_deactivation_hook($file, $callback) {
-                // Mock deactivation hook for standalone mode
-            }
-        }
-        
-        if (!function_exists('plugin_dir_url')) {
-            function plugin_dir_url($file) {
-                return '/assets/';
-            }
-        }
-        
-        if (!function_exists('plugin_dir_path')) {
-            function plugin_dir_path($file) {
-                return __DIR__ . '/';
-            }
-        }
-        
-        if (!function_exists('wp_enqueue_scripts')) {
-            function wp_enqueue_scripts() {
-                // Mock script enqueue for standalone mode
-            }
-        }
-        
-        if (!function_exists('get_option')) {
-            function get_option($option, $default = false) {
-                return $default;
-            }
-        }
-        
-        if (!function_exists('update_option')) {
-            function update_option($option, $value) {
-                return true;
-            }
-        }
-        
-        // Define necessary constants for standalone mode
-        if (!defined('ABSPATH')) {
-            define('ABSPATH', __DIR__ . '/');
-        }
-        if (!defined('AFFILIATE_PORTAL_URL')) {
-            define('AFFILIATE_PORTAL_URL', '/');
-        }
-        if (!defined('AFFILIATE_PORTAL_PATH')) {
-            define('AFFILIATE_PORTAL_PATH', __DIR__ . '/');
-        }
-        if (!defined('AFFILIATE_PORTAL_VERSION')) {
-            define('AFFILIATE_PORTAL_VERSION', '1.3.0');
-        }
-        
-        // Handle the request after class definition
-        add_action('init', 'handle_standalone_request');
-        function handle_standalone_request() {
-            $action = sanitize_text_field($_POST['action']);
-            if ($action === 'affiliate_submit_kyc') {
-                $affiliate_portal = new AffiliatePortal();
-                $affiliate_portal->handle_kyc_submission();
-            }
-        }
-    } else {
-        exit;
-    }
+    exit;
 }
 
-// Define plugin constants if not already defined
-if (!defined('AFFILIATE_PORTAL_URL')) {
-    define('AFFILIATE_PORTAL_URL', plugin_dir_url(__FILE__));
-}
-if (!defined('AFFILIATE_PORTAL_PATH')) {
-    define('AFFILIATE_PORTAL_PATH', plugin_dir_path(__FILE__));
-}
-if (!defined('AFFILIATE_PORTAL_VERSION')) {
-    define('AFFILIATE_PORTAL_VERSION', '1.3.0');
-}
+// Define plugin constants
+define('AFFILIATE_PORTAL_URL', plugin_dir_url(__FILE__));
+define('AFFILIATE_PORTAL_PATH', plugin_dir_path(__FILE__));
+define('AFFILIATE_PORTAL_VERSION', '1.3.0');
 
 class AffiliatePortal {
     
@@ -186,6 +44,7 @@ class AffiliatePortal {
         add_shortcode('affiliate_login', array($this, 'login_shortcode'));
         add_shortcode('affiliate_register', array($this, 'register_shortcode'));
         add_shortcode('affiliate_dashboard', array($this, 'dashboard_shortcode'));
+        add_shortcode('affiliate_kyc', array($this, 'kyc_shortcode'));
         add_shortcode('affiliate_admin_login', array($this, 'admin_login_shortcode'));
         add_shortcode('affiliate_admin_dashboard', array($this, 'admin_dashboard_shortcode'));
         
@@ -193,6 +52,7 @@ class AffiliatePortal {
         add_shortcode('affiliate_login_pt', array($this, 'login_shortcode_pt'));
         add_shortcode('affiliate_register_pt', array($this, 'register_shortcode_pt'));
         add_shortcode('affiliate_dashboard_pt', array($this, 'dashboard_shortcode_pt'));
+        add_shortcode('affiliate_kyc_pt', array($this, 'kyc_shortcode_pt'));
         add_shortcode('affiliate_admin_login_pt', array($this, 'admin_login_shortcode_pt'));
         add_shortcode('affiliate_admin_dashboard_pt', array($this, 'admin_dashboard_shortcode_pt'));
         
@@ -231,6 +91,9 @@ class AffiliatePortal {
         // KYC AJAX handlers
         add_action('wp_ajax_affiliate_submit_kyc', array($this, 'handle_kyc_submission'));
         add_action('wp_ajax_nopriv_affiliate_submit_kyc', array($this, 'handle_kyc_submission'));
+        add_action('wp_ajax_affiliate_save_kyc_draft', array($this, 'handle_kyc_draft_save'));
+        add_action('wp_ajax_nopriv_affiliate_save_kyc_draft', array($this, 'handle_kyc_draft_save'));
+        add_action('wp_ajax_affiliate_resubmit_kyc', array($this, 'handle_resubmit_kyc'));
         
         // KYC Admin handling
         add_action('wp_ajax_affiliate_get_kyc_applications', array($this, 'get_kyc_applications'));
@@ -240,17 +103,9 @@ class AffiliatePortal {
         add_action('wp_ajax_affiliate_update_kyc_status', array($this, 'update_kyc_status'));
         add_action('wp_ajax_nopriv_affiliate_update_kyc_status', array($this, 'update_kyc_status'));
         
-        // Enhanced KYC verification system
-        add_action('wp_ajax_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
-        add_action('wp_ajax_nopriv_affiliate_get_kyc_verification_details', array($this, 'get_kyc_verification_details'));
-        
-        // Document approval/rejection system
-        add_action('wp_ajax_affiliate_approve_document', array($this, 'handle_document_approval'));
-        add_action('wp_ajax_nopriv_affiliate_approve_document', array($this, 'handle_document_approval'));
-        add_action('wp_ajax_affiliate_reject_document', array($this, 'handle_document_rejection'));
-        add_action('wp_ajax_nopriv_affiliate_reject_document', array($this, 'handle_document_rejection'));
-        add_action('wp_ajax_affiliate_get_document_details', array($this, 'get_document_details'));
-        add_action('wp_ajax_nopriv_affiliate_get_document_details', array($this, 'get_document_details'));
+        // Enhanced applications with KYC
+        add_action('wp_ajax_affiliate_get_applications_with_kyc', array($this, 'get_applications_with_kyc'));
+        add_action('wp_ajax_nopriv_affiliate_get_applications_with_kyc', array($this, 'get_applications_with_kyc'));
         
         // Create pages on activation and version updates
         add_action('wp_loaded', array($this, 'maybe_update_pages'));
@@ -614,7 +469,7 @@ class AffiliatePortal {
     // REMOVED: Old JWT auth cookie method - replaced by database session system
     
     // Get current user ID from database session authentication
-    private function get_current_user_id() {
+    public function get_current_user_id() {
         $auth_data = $this->is_user_authenticated();
         return $auth_data ? $auth_data['user_id'] : null;
     }
@@ -647,22 +502,23 @@ class AffiliatePortal {
         return false;
     }
     
-    // Consolidated KYC table creation method
-    private function create_consolidated_kyc_table($kyc_table_name, $charset_collate) {
+    // Ensure KYC table exists (called before KYC operations)
+    private function ensure_kyc_table_exists() {
         global $wpdb;
+        $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
         
         // Check if table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$kyc_table_name'") === $kyc_table_name;
         
         if (!$table_exists) {
-            error_log('Affiliate Portal: Creating KYC table with comprehensive schema...');
+            error_log('Affiliate Portal: KYC table missing, creating now...');
             
-            $kyc_sql = "CREATE TABLE IF NOT EXISTS $kyc_table_name (
+            $charset_collate = $wpdb->get_charset_collate();
+            
+            $kyc_sql = "CREATE TABLE $kyc_table_name (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 user_id mediumint(9) NOT NULL,
-                account_type varchar(20) NOT NULL DEFAULT 'individual',
-                
-                -- Individual fields
+                account_type varchar(20) NOT NULL,
                 full_name varchar(200) DEFAULT '',
                 date_of_birth date NULL,
                 email varchar(120) DEFAULT '',
@@ -674,97 +530,57 @@ class AffiliatePortal {
                 city varchar(100) DEFAULT '',
                 country varchar(100) DEFAULT '',
                 post_code varchar(20) DEFAULT '',
-                
-                -- Company contact fields
-                business_contact_name varchar(200) DEFAULT '',
-                job_title varchar(100) DEFAULT '',
-                business_email varchar(120) DEFAULT '',
-                business_telephone varchar(20) DEFAULT '',
-                
-                -- Company details
-                full_company_name varchar(200) DEFAULT '',
-                trading_name varchar(200) DEFAULT '',
-                type_of_business varchar(100) DEFAULT '',
-                company_registration_no varchar(100) DEFAULT '',
-                company_email varchar(120) DEFAULT '',
-                company_telephone varchar(20) DEFAULT '',
-                company_address_line1 varchar(255) DEFAULT '',
-                company_address_line2 varchar(255) DEFAULT '',
-                company_city varchar(100) DEFAULT '',
-                company_country varchar(100) DEFAULT '',
-                company_post_code varchar(20) DEFAULT '',
-                
-                -- Affiliate sites
                 affiliate_sites text,
                 
-                -- Document URLs with approval status
                 identity_document_type varchar(50) DEFAULT '',
                 identity_document_number varchar(100) DEFAULT '',
                 identity_document_expiry date NULL,
                 identity_document_url text,
-                identity_document_status varchar(20) DEFAULT 'pending',
-                identity_document_notes text,
+                identification_url text,
                 
                 address_proof_type varchar(50) DEFAULT '',
                 address_proof_url text,
-                address_proof_status varchar(20) DEFAULT 'pending',
-                address_proof_notes text,
                 
                 bank_statement_url text,
-                bank_statement_status varchar(20) DEFAULT 'pending',
-                bank_statement_notes text,
                 
                 selfie_url text,
-                selfie_status varchar(20) DEFAULT 'pending',
-                selfie_notes text,
-                
                 passport_url text,
-                passport_status varchar(20) DEFAULT 'pending',
-                passport_notes text,
                 
+                company_name varchar(200) DEFAULT '',
                 company_registration_certificate_url text,
-                company_registration_certificate_status varchar(20) DEFAULT 'pending',
-                company_registration_certificate_notes text,
-                
-                company_address_proof_url text,
-                company_address_proof_status varchar(20) DEFAULT 'pending',
-                company_address_proof_notes text,
-                
-                business_license_url text,
-                business_license_status varchar(20) DEFAULT 'pending',
-                business_license_notes text,
-                
-                directors_id_docs_url text,
-                directors_id_docs_status varchar(20) DEFAULT 'pending',
-                directors_id_docs_notes text,
-                
-                -- Company specific
                 company_type varchar(100) DEFAULT '',
                 registration_number varchar(100) DEFAULT '',
+                business_registration_number varchar(100) DEFAULT '',
                 tax_id varchar(100) DEFAULT '',
                 incorporation_date date NULL,
+                business_license_url text,
                 
-                -- Directors and shareholders (JSON)
-                list_of_directors text,
-                list_of_shareholders text,
+                directors_list text,
+                shareholdings text,
                 
-                -- Director documents (JSON - each director can have separate docs)
-                director_documents text,
+                business_contact_name varchar(200) DEFAULT '',
+                business_contact_job_title varchar(100) DEFAULT '',
+                business_contact_email varchar(120) DEFAULT '',
+                business_contact_phone varchar(20) DEFAULT '',
+                business_email varchar(120) DEFAULT '',
+                business_phone varchar(20) DEFAULT '',
+                business_address text,
+                company_trading_name varchar(200) DEFAULT '',
+                affiliate_urls text,
                 
-                -- Status and admin
                 kyc_status varchar(50) DEFAULT 'draft',
-                overall_status varchar(50) DEFAULT 'pending_review',
                 admin_notes text,
+                admin_comments text,
                 submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP,
+                updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 reviewed_at datetime NULL,
                 reviewed_by varchar(100) DEFAULT '',
-                last_updated datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 
                 PRIMARY KEY (id),
                 UNIQUE KEY user_id (user_id),
                 KEY idx_account_type (account_type),
-                KEY idx_kyc_status (kyc_status),
-                KEY idx_overall_status (overall_status)
+                KEY idx_kyc_status (kyc_status)
             ) $charset_collate;";
             
             require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -772,26 +588,16 @@ class AffiliatePortal {
             
             // Verify creation
             $created = $wpdb->get_var("SHOW TABLES LIKE '$kyc_table_name'") === $kyc_table_name;
-            error_log('Affiliate Portal: KYC table creation result: ' . ($created ? 'SUCCESS' : 'FAILED'));
+            error_log('Affiliate Portal: KYC table creation attempt result: ' . ($created ? 'SUCCESS' : 'FAILED'));
             
             if ($wpdb->last_error) {
                 error_log('Affiliate Portal: KYC table creation error: ' . $wpdb->last_error);
             }
             
-            return $result;
+            return $created;
         }
         
-        error_log('Affiliate Portal: KYC table already exists');
-        return ['KYC table already exists'];
-    }
-    
-    // Ensure KYC table exists (called before KYC operations) - now uses consolidated method
-    private function ensure_kyc_table_exists() {
-        global $wpdb;
-        $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        return $this->create_consolidated_kyc_table($kyc_table_name, $charset_collate);
+        return true;
     }
     
     // Admin authentication - using database sessions
@@ -834,7 +640,7 @@ class AffiliatePortal {
         
         $charset_collate = $wpdb->get_charset_collate();
         
-        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        $sql = "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             username varchar(64) NOT NULL UNIQUE,
             password varchar(256) NOT NULL,
@@ -906,9 +712,67 @@ class AffiliatePortal {
         
         $email_result = dbDelta($email_config_sql);
         
-        // Create comprehensive KYC table using consolidated schema
+        // Create KYC (Know Your Customer) table for both Individual and Company types
         $kyc_table_name = $wpdb->prefix . 'affiliate_kyc';
-        $kyc_result = $this->create_consolidated_kyc_table($kyc_table_name, $charset_collate);
+        
+        $kyc_sql = "CREATE TABLE $kyc_table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            user_id mediumint(9) NOT NULL,
+            account_type varchar(20) NOT NULL,
+            full_name varchar(200) DEFAULT '',
+            date_of_birth date NULL,
+            email varchar(120) DEFAULT '',
+            mobile_number varchar(20) DEFAULT '',
+            affiliate_type varchar(50) DEFAULT '',
+            address_line1 varchar(255) DEFAULT '',
+            address_line2 varchar(255) DEFAULT '',
+            city varchar(100) DEFAULT '',
+            country varchar(100) DEFAULT '',
+            post_code varchar(20) DEFAULT '',
+            
+            identity_document_type varchar(50) DEFAULT '',
+            identity_document_number varchar(100) DEFAULT '',
+            identity_document_expiry date NULL,
+            identity_document_url text,
+            
+            address_proof_type varchar(50) DEFAULT '',
+            address_proof_url text,
+            
+            bank_statement_url text,
+            
+            selfie_url text,
+            passport_url text,
+            
+            company_registration_certificate_url text,
+            company_type varchar(100) DEFAULT '',
+            registration_number varchar(100) DEFAULT '',
+            tax_id varchar(100) DEFAULT '',
+            incorporation_date date NULL,
+            business_license_url text,
+            
+            directors_list text,
+            shareholdings text,
+            
+            business_contact_name varchar(200) DEFAULT '',
+            business_contact_job_title varchar(100) DEFAULT '',
+            business_contact_email varchar(120) DEFAULT '',
+            business_contact_phone varchar(20) DEFAULT '',
+            company_trading_name varchar(200) DEFAULT '',
+            affiliate_urls text,
+            
+            kyc_status varchar(50) DEFAULT 'draft',
+            admin_notes text,
+            submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at datetime NULL,
+            reviewed_by varchar(100) DEFAULT '',
+            
+            PRIMARY KEY (id),
+            UNIQUE KEY user_id (user_id),
+            KEY idx_account_type (account_type),
+            KEY idx_kyc_status (kyc_status)
+        ) $charset_collate;";
+        
+        $kyc_result = dbDelta($kyc_sql);
         
         // Log KYC table creation result
         error_log('Affiliate Portal: KYC table creation result: ' . print_r($kyc_result, true));
@@ -1153,6 +1017,23 @@ class AffiliatePortal {
             error_log('Affiliate Portal: Dashboard page created/updated');
         }
         
+        // Create KYC Page
+        $kyc_page = get_page_by_title('Affiliate KYC');
+        if (!$kyc_page || $force_recreation) {
+            if ($kyc_page && $force_recreation) {
+                // Delete existing page to recreate with updated content
+                wp_delete_post($kyc_page->ID, true);
+            }
+            wp_insert_post(array(
+                'post_title' => 'Affiliate KYC',
+                'post_content' => '[affiliate_kyc]',
+                'post_status' => 'publish',
+                'post_type' => 'page',
+                'post_name' => 'affiliate-kyc'
+            ));
+            error_log('Affiliate Portal: KYC page created/updated');
+        }
+        
         // Create Admin Login Page
         $admin_login_page = get_page_by_title('Admin Login');
         if (!$admin_login_page || $force_recreation) {
@@ -1241,6 +1122,22 @@ class AffiliatePortal {
                 'post_name' => 'painel-afiliado'
             ));
             error_log('Affiliate Portal: Portuguese dashboard page created/updated');
+        }
+        
+        // Create Portuguese KYC Page
+        $kyc_page = get_page_by_title('KYC do Afiliado');
+        if (!$kyc_page || $force_recreation) {
+            if ($kyc_page && $force_recreation) {
+                wp_delete_post($kyc_page->ID, true);
+            }
+            wp_insert_post(array(
+                'post_title' => 'KYC do Afiliado',
+                'post_content' => '[affiliate_kyc_pt]',
+                'post_status' => 'publish',
+                'post_type' => 'page',
+                'post_name' => 'afiliado-kyc'
+            ));
+            error_log('Affiliate Portal: Portuguese KYC page created/updated');
         }
         
         // Create Portuguese Admin Login Page
@@ -1451,16 +1348,33 @@ class AffiliatePortal {
         // Enqueue appropriate script based on current page language
         $current_page = get_queried_object();
         $is_portuguese_page = false;
+        $should_enqueue_scripts = false;
         
         if ($current_page && isset($current_page->post_name)) {
             $portuguese_pages = array('afiliado-login', 'afiliado-registro', 'painel-afiliado', 'admin-login-pt', 'painel-admin');
+            $english_pages = array('affiliate-login', 'affiliate-register', 'affiliate-dashboard', 'affiliate-kyc', 'admin-dashboard', 'admin-login');
+            
             $is_portuguese_page = in_array($current_page->post_name, $portuguese_pages);
+            $should_enqueue_scripts = $is_portuguese_page || in_array($current_page->post_name, $english_pages);
         }
         
-        if ($is_portuguese_page) {
-            wp_enqueue_script('affiliate-portal-script', AFFILIATE_PORTAL_URL . 'assets/script-pt.js', array('jquery'), AFFILIATE_PORTAL_VERSION, true);
-        } else {
-            wp_enqueue_script('affiliate-portal-script', AFFILIATE_PORTAL_URL . 'assets/script.js', array('jquery'), AFFILIATE_PORTAL_VERSION, true);
+        // Also enqueue for any page that contains our shortcodes
+        if (!$should_enqueue_scripts && $current_page && isset($current_page->post_content)) {
+            $affiliate_shortcodes = array('[affiliate_', '[affiliate_admin_');
+            foreach ($affiliate_shortcodes as $shortcode) {
+                if (strpos($current_page->post_content, $shortcode) !== false) {
+                    $should_enqueue_scripts = true;
+                    break;
+                }
+            }
+        }
+        
+        if ($should_enqueue_scripts) {
+            if ($is_portuguese_page) {
+                wp_enqueue_script('affiliate-portal-script', AFFILIATE_PORTAL_URL . 'assets/script-pt.js', array('jquery'), AFFILIATE_PORTAL_VERSION, true);
+            } else {
+                wp_enqueue_script('affiliate-portal-script', AFFILIATE_PORTAL_URL . 'assets/script.js', array('jquery'), AFFILIATE_PORTAL_VERSION, true);
+            }
         }
         
         // Load countries data from JSON file
@@ -1476,14 +1390,23 @@ class AffiliatePortal {
             get_permalink(get_page_by_path('painel-afiliado')) : 
             get_permalink(get_page_by_title('Affiliate Dashboard'));
         
-        wp_localize_script('affiliate-portal-script', 'affiliatePortalAjax', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('affiliate_nonce'),
-            'loginRedirect' => $login_redirect,
-            'pluginUrl' => AFFILIATE_PORTAL_URL,
-            'isPortuguese' => $is_portuguese_page,
-            'countriesData' => $countries_data
-        ));
+        // Only localize if script was enqueued
+        if ($should_enqueue_scripts) {
+            wp_localize_script('affiliate-portal-script', 'affiliatePortalAjax', array(
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('affiliate_nonce'),
+                'loginRedirect' => $login_redirect,
+                'pluginUrl' => AFFILIATE_PORTAL_URL,
+                'isPortuguese' => $is_portuguese_page,
+                'countriesData' => $countries_data
+            ));
+            
+            // ALSO provide the affiliate_ajax object for backward compatibility
+            wp_localize_script('affiliate-portal-script', 'affiliate_ajax', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('affiliate_nonce')
+            ));
+        }
     }
     
     public function custom_css() {
@@ -1802,6 +1725,19 @@ class AffiliatePortal {
             include AFFILIATE_PORTAL_PATH . 'templates/dashboard.php';
         }
         
+        return ob_get_clean();
+    }
+    
+    public function kyc_shortcode($atts) {
+        // Force cache-busting headers to prevent browser caching of user data
+        if (!headers_sent()) {
+            header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
+        }
+        
+        ob_start();
+        include AFFILIATE_PORTAL_PATH . 'templates/kyc-form.php';
         return ob_get_clean();
     }
     
@@ -2353,8 +2289,8 @@ class AffiliatePortal {
                 'zipcode' => isset($_POST['zipcode']) ? sanitize_text_field($_POST['zipcode']) : '',
                 'chat_id_channel' => isset($_POST['chat_id_channel']) ? sanitize_text_field($_POST['chat_id_channel']) : '',
                 'affiliate_type' => isset($_POST['affiliate_type']) ? sanitize_text_field($_POST['affiliate_type']) : '',
-                'currency' => isset($_POST['currency']) ? sanitize_text_field($_POST['currency']) : ''
-                // Note: status column will use default value 'awaiting approval' from database
+                'currency' => isset($_POST['currency']) ? sanitize_text_field($_POST['currency']) : '',
+                // Removed kyc_status from registration - KYC is handled separately
             );
             
             // Debug: Log prepared data
@@ -2374,8 +2310,8 @@ class AffiliatePortal {
                 ));
                 error_log('Affiliate Portal: Inserted user data: ' . print_r($inserted_user, true));
                 
-                // Send confirmation email to user
-                $this->send_user_confirmation_email($data['email'], $data['first_name'], $data['last_name']);
+                // Send confirmation email to user - DISABLED (only KYC email will be sent)
+                // $this->send_user_confirmation_email($data['email'], $data['first_name'], $data['last_name']);
                 
                 // Send notification to admins
                 $this->send_registration_notification($user_id, $data);
@@ -2884,6 +2820,19 @@ class AffiliatePortal {
         return ob_get_clean();
     }
     
+    public function kyc_shortcode_pt($atts) {
+        // Force cache-busting headers to prevent browser caching of user data
+        if (!headers_sent()) {
+            header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
+        }
+        
+        ob_start();
+        include AFFILIATE_PORTAL_PATH . 'templates/pt/kyc-form.php';
+        return ob_get_clean();
+    }
+    
     public function admin_login_shortcode_pt($atts) {
         ob_start();
         include AFFILIATE_PORTAL_PATH . 'templates/pt/admin-login.php';
@@ -3014,26 +2963,23 @@ class AffiliatePortal {
         }
         
         global $wpdb;
-        $users_table = $wpdb->prefix . 'affiliate_users';
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        $table_name = $wpdb->prefix . 'affiliate_users';
         
         // Get pagination parameters
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         $per_page = isset($_POST['per_page']) ? max(1, min(100, intval($_POST['per_page']))) : 25;
         $status_filter = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
         
-        // Build WHERE clause for users table
+        // Build WHERE clause
         $where_clause = '';
         $where_args = array();
         if (!empty($status_filter)) {
-            $where_clause = " WHERE u.status = %s";
+            $where_clause = " WHERE status = %s";
             $where_args[] = $status_filter;
         }
         
-        // Get total count for pagination (with JOIN)
-        $total_query = "SELECT COUNT(*) FROM $users_table u 
-                       LEFT JOIN $kyc_table k ON u.id = k.user_id 
-                       $where_clause";
+        // Get total count for pagination
+        $total_query = "SELECT COUNT(*) FROM $table_name$where_clause";
         if (!empty($where_args)) {
             $total_records = $wpdb->get_var($wpdb->prepare($total_query, $where_args));
         } else {
@@ -3044,16 +2990,9 @@ class AffiliatePortal {
         $total_pages = ceil($total_records / $per_page);
         $offset = ($page - 1) * $per_page;
         
-        // Get paginated results with KYC status
+        // Get paginated results
         $limit_clause = $wpdb->prepare(" LIMIT %d OFFSET %d", $per_page, $offset);
-        $applications_query = "SELECT u.*, 
-                              COALESCE(k.kyc_status, 'not_started') as user_kyc_status,
-                              k.submitted_at as kyc_submitted_at
-                              FROM $users_table u 
-                              LEFT JOIN $kyc_table k ON u.id = k.user_id 
-                              $where_clause 
-                              ORDER BY u.created_at DESC
-                              $limit_clause";
+        $applications_query = "SELECT * FROM $table_name$where_clause ORDER BY created_at DESC$limit_clause";
         
         if (!empty($where_args)) {
             $applications = $wpdb->get_results($wpdb->prepare($applications_query, $where_args));
@@ -3241,24 +3180,39 @@ class AffiliatePortal {
         
         $subject = 'New Affiliate Registration - ' . $user_data['first_name'] . ' ' . $user_data['last_name'];
         
-        $message = "
-        <h2>New Affiliate Registration</h2>
-        <p>A new affiliate has registered and is pending KYC completion.</p>
-        
-        <h3>Registration Details:</h3>
-        <ul>
-            <li><strong>Name:</strong> {$user_data['name_prefix']} {$user_data['first_name']} {$user_data['last_name']}</li>
-            <li><strong>Email:</strong> {$user_data['email']}</li>
-            <li><strong>Company:</strong> {$user_data['company_name']}</li>
-            <li><strong>Country:</strong> {$user_data['country']}</li>
-            <li><strong>Affiliate Type:</strong> {$user_data['affiliate_type']}</li>
-            <li><strong>Mobile:</strong> {$user_data['country_code']} {$user_data['mobile_number']}</li>
-            <li><strong>Status:</strong> KYC Pending</li>
-        </ul>
-        
-        <p>The user needs to complete KYC verification before approval can be processed.</p>
-        <p>Please log in to the admin portal to review this application once KYC is submitted.</p>
+        $content = "
+            <h2 style='color: #667eea; margin-top: 0; font-size: 24px;'>📝 New Affiliate Registration</h2>
+            <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                A new affiliate has registered and is pending KYC completion.
+            </p>
+            
+            <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;'>
+                <h3 style='color: #495057; margin-top: 0; font-size: 18px;'>👤 Registration Details:</h3>
+                <table style='width: 100%; border-collapse: collapse;'>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Name:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['name_prefix']} {$user_data['first_name']} {$user_data['last_name']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Email:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['email']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Company:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['company_name']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Country:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['country']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Affiliate Type:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['affiliate_type']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Mobile:</td><td style='padding: 8px 0; color: #6c757d;'>{$user_data['country_code']} {$user_data['mobile_number']}</td></tr>
+                    <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Status:</td><td style='padding: 8px 0; color: #ffc107; font-weight: 600;'>⏳ KYC Pending</td></tr>
+                </table>
+            </div>
+            
+            <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 5px;'>
+                <p style='margin: 0; color: #856404; font-weight: 600;'>
+                    📋 <strong>Action Required:</strong> The user needs to complete KYC verification before approval can be processed.
+                </p>
+            </div>
+            
+            <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #e3f2fd; border-radius: 8px;'>
+                <p style='color: #1976d2; margin: 0; font-weight: 600;'>
+                    Please log in to the admin portal to review this application once KYC is submitted.
+                </p>
+            </div>
         ";
+        
+        $message = $this->get_email_template('New Affiliate Registration', $content);
         
         // Send welcome email to user with KYC instruction
         $this->send_welcome_email_with_kyc($user_data);
@@ -3289,90 +3243,70 @@ class AffiliatePortal {
         
         if ($is_portuguese) {
             $subject = 'Bem-vindo! Complete sua Verificação KYC - GEM AFFILIATE';
-            $message = "
-            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
-                    <h1 style='margin: 0; font-size: 28px;'>Bem-vindo ao GEM AFFILIATE!</h1>
+            $content = "
+                <h2 style='color: #667eea; margin-top: 0; font-size: 24px;'>🎉 Bem-vindo ao GEM AFFILIATE!</h2>
+                <p style='font-size: 16px; line-height: 1.6; color: #333;'>Prezado(a) <strong>{$user_data['first_name']} {$user_data['last_name']}</strong>,</p>
+                
+                <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                    Obrigado por se registrar em nosso programa de afiliados! Para completar seu processo de registro, você precisa concluir a <strong>verificação KYC (Conheça Seu Cliente)</strong>.
+                </p>
+                
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                    <h3 style='margin: 0 0 15px 0; font-size: 18px;'>📋 Próximos Passos:</h3>
+                    <ol style='margin: 0; padding-left: 20px; line-height: 1.8;'>
+                        <li>Faça login em sua conta usando suas credenciais</li>
+                        <li>Complete o formulário de verificação KYC</li>
+                        <li>Envie os documentos necessários</li>
+                        <li>Nossa equipe revisará sua submissão dentro de 1-2 dias úteis</li>
+                    </ol>
                 </div>
                 
-                <div style='padding: 30px;'>
-                    <p>Prezado(a) {$user_data['first_name']} {$user_data['last_name']},</p>
-                    
-                    <p>Obrigado por se registrar conosco! Sua conta foi criada com sucesso.</p>
-                    
-                    <div style='background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;'>
-                        <h3 style='color: #856404; margin: 0 0 15px 0;'>🔔 Ação Necessária: Complete sua Verificação KYC</h3>
-                        <p style='margin: 0; color: #856404;'>Para ativar sua conta e começar a ganhar comissões, você precisa completar o processo de verificação KYC (Conheça Seu Cliente).</p>
-                    </div>
-                    
-                    <h3>Próximos passos:</h3>
-                    <ol style='line-height: 1.6;'>
-                        <li>Faça login no seu painel de afiliado</li>
-                        <li>Complete o formulário KYC com seus dados pessoais</li>
-                        <li>Faça upload dos documentos necessários</li>
-                        <li>Aguarde a análise da nossa equipe (3-5 dias úteis)</li>
-                        <li>Receba a aprovação final e comece a ganhar!</li>
-                    </ol>
-                    
-                    <p><strong>Status Atual:</strong> KYC Pendente</p>
-                    <p><strong>Documentos Necessários:</strong></p>
-                    <ul style='line-height: 1.6;'>
-                        <li>Documento de identidade válido (RG, CNH ou Passaporte)</li>
-                        <li>Comprovante de endereço (conta de luz, água ou telefone)</li>
-                    </ul>
-                    
-                    <p>Se tiver dúvidas, entre em contato conosco em support@gem-affiliate.com</p>
-                    
-                    <p style='margin-top: 30px;'>
-                        Atenciosamente,<br>
-                        <strong>Equipe GEM AFFILIATE</strong>
+                <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 5px;'>
+                    <p style='margin: 0; color: #856404; font-weight: 600;'>
+                        ⚠️ <strong>Importante:</strong> Sua conta só será ativada após a aprovação bem-sucedida do KYC.
                     </p>
                 </div>
-            </div>
+                
+                <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;'>
+                    <p style='color: #6c757d; margin: 0; font-style: italic;'>
+                        \"Estamos ansiosos para trabalhar com você!\"
+                    </p>
+                </div>
             ";
+            $message = $this->get_email_template('Bem-vindo ao GEM AFFILIATE', $content, true);
         } else {
             $subject = 'Welcome! Complete Your KYC Verification - GEM AFFILIATE';
-            $message = "
-            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
-                    <h1 style='margin: 0; font-size: 28px;'>Welcome to GEM AFFILIATE!</h1>
+            $content = "
+                <h2 style='color: #667eea; margin-top: 0; font-size: 24px;'>🎉 Welcome to GEM AFFILIATE!</h2>
+                <p style='font-size: 16px; line-height: 1.6; color: #333;'>Hello <strong>{$user_data['first_name']} {$user_data['last_name']}</strong>,</p>
+                
+                <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                    Thank you for registering with our affiliate program! To complete your registration process, you need to complete <strong>KYC (Know Your Customer) verification</strong>.
+                </p>
+                
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                    <h3 style='margin: 0 0 15px 0; font-size: 18px;'>📋 Next Steps:</h3>
+                    <ol style='margin: 0; padding-left: 20px; line-height: 1.8;'>
+                        <li>Log in to your account using your credentials</li>
+                        <li>Complete the KYC verification form</li>
+                        <li>Submit required documents</li>
+                        <li>Our team will review your submission within 1-2 business days</li>
+                    </ol>
                 </div>
                 
-                <div style='padding: 30px;'>
-                    <p>Dear {$user_data['first_name']} {$user_data['last_name']},</p>
-                    
-                    <p>Thank you for registering with us! Your account has been successfully created.</p>
-                    
-                    <div style='background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;'>
-                        <h3 style='color: #856404; margin: 0 0 15px 0;'>🔔 Action Required: Complete Your KYC Verification</h3>
-                        <p style='margin: 0; color: #856404;'>To activate your account and start earning commissions, you need to complete the KYC (Know Your Customer) verification process.</p>
-                    </div>
-                    
-                    <h3>Next Steps:</h3>
-                    <ol style='line-height: 1.6;'>
-                        <li>Log in to your affiliate dashboard</li>
-                        <li>Complete the KYC form with your personal information</li>
-                        <li>Upload the required documents</li>
-                        <li>Wait for our team's review (3-5 business days)</li>
-                        <li>Receive final approval and start earning!</li>
-                    </ol>
-                    
-                    <p><strong>Current Status:</strong> KYC Pending</p>
-                    <p><strong>Required Documents:</strong></p>
-                    <ul style='line-height: 1.6;'>
-                        <li>Valid ID document (Passport, Driver's License, or National ID)</li>
-                        <li>Proof of address (Utility bill, bank statement, or lease agreement)</li>
-                    </ul>
-                    
-                    <p>If you have any questions, please contact us at support@gem-affiliate.com</p>
-                    
-                    <p style='margin-top: 30px;'>
-                        Best regards,<br>
-                        <strong>GEM AFFILIATE Team</strong>
+                <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 5px;'>
+                    <p style='margin: 0; color: #856404; font-weight: 600;'>
+                        ⚠️ <strong>Important:</strong> Your account will only be activated after successful KYC approval.
                     </p>
                 </div>
-            </div>
+                
+                <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;'>
+                    <p style='color: #6c757d; margin: 0; font-style: italic;'>
+                        \"We're excited to work with you!\"
+                    </p>
+                </div>
             ";
+            $message = $this->get_email_template('Welcome to GEM AFFILIATE', $content);
         }
         
         $headers = array(
@@ -3423,6 +3357,148 @@ class AffiliatePortal {
         ));
     }
     
+    // Enhanced applications handler with KYC data
+    public function get_applications_with_kyc() {
+        if (!$this->is_admin_authenticated()) {
+            wp_send_json_error('Unauthorized access');
+            return;
+        }
+        
+        global $wpdb;
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
+        
+        $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
+        $search_term = sanitize_text_field($_POST['search'] ?? '');
+        $per_page = intval($_POST['per_page'] ?? 25);
+        $page = intval($_POST['page'] ?? 1);
+        $offset = ($page - 1) * $per_page;
+        
+        $where_clause = '';
+        $where_params = array();
+        
+        // Build WHERE clause conditions
+        $where_conditions = array();
+        
+        // Handle different status filter types
+        if (!empty($status_filter) && $status_filter !== 'all') {
+            switch ($status_filter) {
+                case 'pending':
+                    $where_conditions[] = '(k.kyc_status IS NULL OR k.kyc_status IN ("draft", "not_started"))';
+                    break;
+                case 'awaiting_approval':
+                    $where_conditions[] = 'k.kyc_status = %s';
+                    $where_params[] = 'awaiting approval';
+                    break;
+                case 'approved':
+                    $where_conditions[] = 'u.status = %s';
+                    $where_params[] = 'approved';
+                    break;
+                case 'rejected':
+                    $where_conditions[] = 'u.status = %s';
+                    $where_params[] = 'rejected';
+                    break;
+                case 'incomplete':
+                    $where_conditions[] = 'k.kyc_status = %s';
+                    $where_params[] = 'incomplete';
+                    break;
+                default:
+                    // For any other status, filter by user status
+                    $where_conditions[] = 'u.status = %s';
+                    $where_params[] = $status_filter;
+                    break;
+            }
+        }
+        
+        // Handle search functionality
+        if (!empty($search_term)) {
+            $where_conditions[] = '(u.first_name LIKE %s OR u.last_name LIKE %s OR u.email LIKE %s OR u.company_name LIKE %s)';
+            $search_pattern = '%' . $search_term . '%';
+            $where_params[] = $search_pattern;
+            $where_params[] = $search_pattern;
+            $where_params[] = $search_pattern;
+            $where_params[] = $search_pattern;
+        }
+        
+        // Build final WHERE clause
+        if (!empty($where_conditions)) {
+            $where_clause = ' WHERE ' . implode(' AND ', $where_conditions);
+        }
+        
+        // Query to get applications with KYC status
+        $query = "
+            SELECT 
+                u.id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.company_name,
+                u.type,
+                u.country,
+                u.status,
+                u.created_at,
+                u.admin_remarks,
+                k.kyc_status,
+                k.admin_comments as kyc_comments,
+                k.submitted_at as kyc_submitted_at,
+                k.approved_at as kyc_approved_at
+            FROM $users_table u
+            LEFT JOIN $kyc_table k ON u.id = k.user_id
+            $where_clause
+            ORDER BY u.created_at DESC
+            LIMIT %d OFFSET %d
+        ";
+        
+        $where_params[] = $per_page;
+        $where_params[] = $offset;
+        
+        $applications = $wpdb->get_results($wpdb->prepare($query, $where_params));
+        
+        // Get total count for pagination
+        $count_query = "
+            SELECT COUNT(*)
+            FROM $users_table u
+            LEFT JOIN $kyc_table k ON u.id = k.user_id
+            $where_clause
+        ";
+        
+        if (!empty($where_params)) {
+            // Remove LIMIT and OFFSET params for count query  
+            $count_params = array_slice($where_params, 0, -2);
+            $total_count = $wpdb->get_var($wpdb->prepare($count_query, $count_params));
+        } else {
+            $total_count = $wpdb->get_var($count_query);
+        }
+        
+        // Get stats with proper KYC mapping
+        $stats = array(
+            'all' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table u LEFT JOIN $kyc_table k ON u.id = k.user_id"),
+            'pending' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table u LEFT JOIN $kyc_table k ON u.id = k.user_id WHERE k.kyc_status IS NULL OR k.kyc_status IN ('draft', 'not_started')"),
+            'awaiting_approval' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table u LEFT JOIN $kyc_table k ON u.id = k.user_id WHERE k.kyc_status = 'awaiting approval'"),
+            'approved' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table WHERE status = 'approved'"),
+            'rejected' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table WHERE status = 'rejected'"),
+            'incomplete' => $wpdb->get_var("SELECT COUNT(*) FROM $users_table u LEFT JOIN $kyc_table k ON u.id = k.user_id WHERE k.kyc_status = 'incomplete'")
+        );
+        
+        // Prepare pagination info
+        $total_pages = ceil($total_count / $per_page);
+        $pagination = array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total_items' => $total_count,
+            'per_page' => $per_page,
+            'has_next' => $page < $total_pages,
+            'has_previous' => $page > 1
+        );
+        
+        wp_send_json_success(array(
+            'applications' => $applications,
+            'stats' => $stats,
+            'pagination' => $pagination
+        ));
+    }
+    
 
     
     // Send confirmation email to user after registration
@@ -3455,6 +3531,53 @@ class AffiliatePortal {
         wp_mail($email, $subject, $message, $headers);
     }
     
+    // Master email template with GEM Affiliate branding
+    private function get_email_template($title, $content, $is_portuguese = false) {
+        $logo_url = plugin_dir_url(__FILE__) . 'assets/gem-affiliates-logo.png'; // GEM Affiliate logo
+        
+        $greeting = $is_portuguese ? 'Olá' : 'Hello';
+        $footer_text = $is_portuguese ? 
+            'Obrigado por escolher o GEM AFFILIATE.<br>Se você tiver alguma dúvida, entre em contato conosco em office@gemmagics.com' :
+            'Thank you for choosing GEM AFFILIATE.<br>If you have any questions, please contact us at office@gemmagics.com';
+        
+        return "
+        <!DOCTYPE html>
+        <html lang='" . ($is_portuguese ? 'pt' : 'en') . "'>
+        <head>
+            <meta charset='UTF-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>$title</title>
+        </head>
+        <body style='margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;'>
+            <div style='max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                <!-- Header with Logo -->
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
+                    <img src='$logo_url' alt='GEM AFFILIATE' style='max-width: 180px; height: auto; margin-bottom: 15px;' />
+                    <h1 style='margin: 0; font-size: 28px; font-weight: 600;'>$title</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style='padding: 40px 30px;'>
+                    $content
+                </div>
+                
+                <!-- Footer -->
+                <div style='background-color: #f8f9fa; padding: 25px 30px; text-align: center; border-top: 1px solid #e9ecef;'>
+                    <div style='margin-bottom: 15px;'>
+                        <img src='$logo_url' alt='GEM AFFILIATE' style='max-width: 120px; height: auto; opacity: 0.7;' />
+                    </div>
+                    <p style='margin: 0; color: #6c757d; font-size: 14px; line-height: 1.5;'>
+                        $footer_text
+                    </p>
+                    <p style='margin: 10px 0 0 0; color: #adb5bd; font-size: 12px;'>
+                        © " . date('Y') . " GEM AFFILIATE. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>";
+    }
+
     // Send status update notification to user
     public function send_status_update_notification($application_id, $new_status, $admin_remarks = '') {
         global $wpdb;
@@ -3517,55 +3640,51 @@ class AffiliatePortal {
         $remarks_section = '';
         if (!empty($admin_remarks)) {
             $remarks_section = "
-            <div style='background-color: #f8f9fa; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;'>
-                <h4 style='color: #28a745; margin: 0 0 10px 0;'>Additional Notes:</h4>
+            <div style='background-color: #f8f9fa; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0; border-radius: 5px;'>
+                <h4 style='color: #28a745; margin: 0 0 10px 0;'>📝 Additional Notes:</h4>
                 <p style='margin: 0; color: #6c757d;'>" . nl2br(esc_html($admin_remarks)) . "</p>
             </div>";
         }
         
-        return "
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
-                <h1 style='margin: 0; font-size: 28px;'>Application Approved!</h1>
+        $content = "
+            <h2 style='color: #28a745; margin-top: 0; font-size: 24px;'>🎉 Congratulations, {$user_name}!</h2>
+            
+            <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                We are delighted to inform you that your affiliate application has been <strong style='color: #28a745;'>approved</strong>. 
+                Welcome to our affiliate program!
+            </p>
+            
+            <div style='background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0; text-align: center;'>
+                <h3 style='margin: 0 0 10px 0; font-size: 18px;'>🚀 You're Now Part of GEM AFFILIATE!</h3>
+                <p style='margin: 0; opacity: 0.9;'>Get ready to start earning with our premium affiliate program</p>
             </div>
             
-            <div style='padding: 30px;'>
-                <h2 style='color: #28a745; margin-top: 0;'>Congratulations, {$user_name}!</h2>
-                
-                <p style='font-size: 16px; line-height: 1.6; color: #333;'>
-                    We are delighted to inform you that your affiliate application has been <strong>approved</strong>. 
-                    Welcome to our affiliate program!
-                </p>
-                
-                <h3 style='color: #495057; margin-top: 25px;'>What's Next?</h3>
-                <ul style='color: #6c757d; line-height: 1.8;'>
-                    <li>Our team will send you the portal access details on your registered email address</li>
-                    <li>You will receive your unique affiliate links and marketing materials</li>
-                    <li>Commission tracking will begin immediately for any referrals you generate</li>
-                    <li>Our support team is available to help you get started</li>
-                </ul>
-                
-                {$remarks_section}
-                
-                <div style='background-color: #e9ecef; padding: 20px; border-radius: 5px; margin: 25px 0;'>
-                    <h4 style='color: #495057; margin: 0 0 10px 0;'>Portal Access:</h4>
-                    <p style='margin: 0; color: #6c757d;'>
-                        Our team will send you the detailed portal access information on your registered email address shortly. 
-                        Please check your email for login credentials and instructions to get started.
-                    </p>
-                </div>
-                
-                <p style='color: #6c757d; margin-top: 25px;'>
-                    If you have any questions or need assistance, please contact us at office@gemmagics.com
-                </p>
-                
-                <p style='margin-top: 30px; color: #495057;'>
-                    Best regards,<br>
-                    <strong>The Affiliate Team</strong><br>
-                    Email: office@gemmagics.com
+            <h3 style='color: #495057; margin-top: 30px; font-size: 18px;'>📋 What's Next?</h3>
+            <ul style='color: #6c757d; line-height: 1.8; padding-left: 20px;'>
+                <li><strong>Portal Access:</strong> You'll receive login credentials in a separate email</li>
+                <li><strong>Affiliate Links:</strong> Get your unique tracking links and marketing materials</li>
+                <li><strong>Commission Tracking:</strong> Start earning immediately for any referrals you generate</li>
+                <li><strong>Support:</strong> Our dedicated team is here to help you succeed</li>
+            </ul>
+            
+            {$remarks_section}
+            
+            <div style='background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2196f3;'>
+                <h4 style='color: #1976d2; margin: 0 0 10px 0; font-size: 16px;'>🔐 Portal Access Information</h4>
+                <p style='margin: 0; color: #6c757d; line-height: 1.5;'>
+                    Our team will send you the detailed portal access information on your registered email address within the next 24 hours. 
+                    Please check your email for login credentials and setup instructions.
                 </p>
             </div>
-        </div>";
+            
+            <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;'>
+                <p style='color: #6c757d; margin: 0; font-style: italic;'>
+                    \"Welcome to a partnership that grows with your success!\"
+                </p>
+            </div>
+        ";
+        
+        return $this->get_email_template('Application Approved!', $content);
     }
     
     // Email template for rejected applications
@@ -3573,48 +3692,45 @@ class AffiliatePortal {
         $remarks_section = '';
         if (!empty($admin_remarks)) {
             $remarks_section = "
-            <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0;'>
-                <h4 style='color: #856404; margin: 0 0 10px 0;'>Feedback from Our Team:</h4>
+            <div style='background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 5px;'>
+                <h4 style='color: #856404; margin: 0 0 10px 0;'>💬 Feedback from Our Team:</h4>
                 <p style='margin: 0; color: #856404;'>" . nl2br(esc_html($admin_remarks)) . "</p>
             </div>";
         }
         
-        return "
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
-                <h1 style='margin: 0; font-size: 28px;'>Application Update</h1>
+        $content = "
+            <h2 style='color: #dc3545; margin-top: 0; font-size: 24px;'>📋 Application Update</h2>
+            <p style='font-size: 16px; line-height: 1.6; color: #333;'>Dear <strong>{$user_name}</strong>,</p>
+            
+            <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                Thank you for your interest in joining our affiliate program. After careful review, 
+                we regret to inform you that we are <strong>unable to approve your application</strong> at this time.
+            </p>
+            
+            {$remarks_section}
+            
+            <div style='background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                <h4 style='margin: 0 0 15px 0; font-size: 18px;'>🚪 Future Opportunities</h4>
+                <p style='margin: 0; opacity: 0.9; line-height: 1.6;'>
+                    This decision does not prevent you from reapplying in the future. We encourage you to address any feedback provided and consider submitting a new application when ready.
+                </p>
             </div>
             
-            <div style='padding: 30px;'>
-                <h2 style='color: #495057; margin-top: 0;'>Dear {$user_name},</h2>
-                
-                <p style='font-size: 16px; line-height: 1.6; color: #333;'>
-                    Thank you for your interest in joining our affiliate program. After careful review, 
-                    we regret to inform you that we are unable to approve your application at this time.
-                </p>
-                
-                {$remarks_section}
-                
-                <div style='background-color: #e9ecef; padding: 20px; border-radius: 5px; margin: 25px 0;'>
-                    <h4 style='color: #495057; margin: 0 0 10px 0;'>Future Opportunities:</h4>
-                    <p style='margin: 0; color: #6c757d;'>
-                        Please note that this decision does not prevent you from reapplying in the future. 
-                        We encourage you to address any feedback provided and consider submitting a new application.
-                    </p>
-                </div>
-                
-                <p style='color: #6c757d; margin-top: 25px;'>
-                    We appreciate your understanding and thank you for your interest in partnering with us. 
-                    If you have any questions regarding this decision, please feel free to contact us at office@gemmagics.com
-                </p>
-                
-                <p style='margin-top: 30px; color: #495057;'>
-                    Best regards,<br>
-                    <strong>The Affiliate Team</strong><br>
-                    Email: office@gemmagics.com
+            <div style='background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #007bff;'>
+                <h4 style='color: #004085; margin: 0 0 10px 0; font-size: 16px;'>📞 Need More Information?</h4>
+                <p style='margin: 0; color: #004085; line-height: 1.5;'>
+                    If you have questions regarding this decision or would like guidance for future applications, please don't hesitate to contact us.
                 </p>
             </div>
-        </div>";
+            
+            <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;'>
+                <p style='color: #6c757d; margin: 0; font-style: italic;'>
+                    \"We appreciate your interest in partnering with us.\"
+                </p>
+            </div>
+        ";
+        
+        return $this->get_email_template('Application Update', $content);
     }
     
     // Email template for awaiting approval status
@@ -3622,50 +3738,48 @@ class AffiliatePortal {
         $remarks_section = '';
         if (!empty($admin_remarks)) {
             $remarks_section = "
-            <div style='background-color: #d1ecf1; padding: 15px; border-left: 4px solid #17a2b8; margin: 20px 0;'>
-                <h4 style='color: #0c5460; margin: 0 0 10px 0;'>Additional Information:</h4>
+            <div style='background-color: #d1ecf1; padding: 15px; border-left: 4px solid #17a2b8; margin: 20px 0; border-radius: 5px;'>
+                <h4 style='color: #0c5460; margin: 0 0 10px 0;'>ℹ️ Additional Information:</h4>
                 <p style='margin: 0; color: #0c5460;'>" . nl2br(esc_html($admin_remarks)) . "</p>
             </div>";
         }
         
-        return "
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;'>
-            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;'>
-                <h1 style='margin: 0; font-size: 28px;'>Application Status Update</h1>
+        $content = "
+            <h2 style='color: #17a2b8; margin-top: 0; font-size: 24px;'>⏳ Application Status Update</h2>
+            <p style='font-size: 16px; line-height: 1.6; color: #333;'>Dear <strong>{$user_name}</strong>,</p>
+            
+            <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                We wanted to provide you with an update regarding your affiliate application. 
+                Your application is currently <strong style='color: #17a2b8;'>awaiting approval</strong> and is being reviewed by our team.
+            </p>
+            
+            {$remarks_section}
+            
+            <div style='background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                <h4 style='margin: 0 0 15px 0; font-size: 18px;'>🔍 What This Means:</h4>
+                <ul style='margin: 10px 0 0 20px; opacity: 0.9; line-height: 1.6;'>
+                    <li>Our team is actively reviewing your application</li>
+                    <li>We may contact you if additional information is needed</li>
+                    <li>You will receive another update once a final decision is made</li>
+                    <li>Processing typically takes 1-3 business days</li>
+                </ul>
             </div>
             
-            <div style='padding: 30px;'>
-                <h2 style='color: #17a2b8; margin-top: 0;'>Dear {$user_name},</h2>
-                
-                <p style='font-size: 16px; line-height: 1.6; color: #333;'>
-                    We wanted to provide you with an update regarding your affiliate application. 
-                    Your application is currently <strong>awaiting approval</strong> and is being reviewed by our team.
-                </p>
-                
-                {$remarks_section}
-                
-                <div style='background-color: #e9ecef; padding: 20px; border-radius: 5px; margin: 25px 0;'>
-                    <h4 style='color: #495057; margin: 0 0 10px 0;'>What This Means:</h4>
-                    <ul style='margin: 10px 0 0 20px; color: #6c757d; line-height: 1.6;'>
-                        <li>Our team is actively reviewing your application</li>
-                        <li>We may contact you if additional information is needed</li>
-                        <li>You will receive another update once a final decision is made</li>
-                        <li>Processing typically takes 1-3 business days</li>
-                    </ul>
-                </div>
-                
-                <p style='color: #6c757d; margin-top: 25px;'>
-                    We appreciate your patience during the review process. If you have any questions 
-                    or would like to provide additional information, please contact us at office@gemmagics.com
-                </p>
-                
-                <p style='margin-top: 30px; color: #495057;'>
-                    Best regards,<br>
-                    <strong>The Affiliate Team</strong><br>
-                    Email: office@gemmagics.com
+            <div style='background-color: #fff8dc; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ffc107;'>
+                <h4 style='color: #856404; margin: 0 0 10px 0; font-size: 16px;'>⏰ Please Be Patient</h4>
+                <p style='margin: 0; color: #856404; line-height: 1.5;'>
+                    We appreciate your patience during the review process. Our team is working diligently to process all applications fairly and thoroughly.
                 </p>
             </div>
-        </div>";
+            
+            <div style='text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;'>
+                <p style='color: #6c757d; margin: 0; font-style: italic;'>
+                    \"Your application is in good hands with our review team.\"
+                </p>
+            </div>
+        ";
+        
+        return $this->get_email_template('Application Status Update', $content);
     }
     
     // General email template for other status changes
@@ -3787,28 +3901,38 @@ class AffiliatePortal {
     }
     
     public function handle_kyc_submission() {
+        error_log('KYC Submission Handler Called');
+        
         if (!wp_verify_nonce($_POST['nonce'], 'affiliate_nonce')) {
+            error_log('KYC Submission: Nonce verification failed');
             wp_send_json_error('Security check failed');
             return;
         }
         
         // Check if user is logged in
-        $auth_data = $this->is_user_authenticated();
-        if (!$auth_data) {
+        $user_id = $this->get_current_user_id();
+        if (!$user_id) {
+            error_log('KYC Submission: User not logged in');
             wp_send_json_error('User not logged in');
             return;
         }
         
-        $user_id = $auth_data['user_id'];
+        error_log('KYC Submission: User ID = ' . $user_id);
         
         // Ensure KYC table exists before attempting to save data
         if (!$this->ensure_kyc_table_exists()) {
+            error_log('KYC Submission: KYC table does not exist or cannot be created');
             wp_send_json_error('Database table not available. Please contact administrator.');
             return;
         }
         
         global $wpdb;
-        $kyc_action = sanitize_text_field($_POST['kyc_action']);
+        $kyc_action = isset($_POST['kyc_action']) ? sanitize_text_field($_POST['kyc_action']) : 'submit';
+        
+        // Debug: Log what kyc_action was received
+        error_log('KYC Action received: "' . $kyc_action . '"');
+        error_log('POST data keys: ' . print_r(array_keys($_POST), true));
+        error_log('POST account_type: ' . ($_POST['account_type'] ?? 'NOT SET'));
         
         // Get account type to determine which fields to process
         $account_type = sanitize_text_field($_POST['account_type']);
@@ -3817,84 +3941,28 @@ class AffiliatePortal {
         $kyc_data = array(
             'user_id' => $user_id,
             'account_type' => $account_type,
-            'kyc_status' => $kyc_action === 'draft' ? 'draft' : 'pending',
+            'kyc_status' => $kyc_action === 'draft' ? 'draft' : 'awaiting approval',
             'submitted_at' => current_time('mysql')
         );
 
-        // Handle individual form fields
-        $individual_fields = ['full_name', 'date_of_birth', 'email', 'nationality', 'mobile_number', 'affiliate_type', 
-                             'address_line1', 'address_line2', 'city', 'country', 'post_code'];
-        
-        foreach ($individual_fields as $field) {
-            if (isset($_POST[$field])) {
-                if ($field === 'email') {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
-                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
-                }
-            }
+        // Handle basic form fields from KYC forms
+        if (isset($_POST['full_name'])) {
+            $kyc_data['full_name'] = sanitize_text_field($_POST['full_name']);
         }
-        
-        // Handle company contact fields
-        $company_contact_fields = ['business_contact_name', 'job_title', 'business_email', 'business_telephone'];
-        
-        foreach ($company_contact_fields as $field) {
-            if (isset($_POST[$field])) {
-                if ($field === 'business_email') {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
-                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
-                }
-            }
+        if (isset($_POST['date_of_birth'])) {
+            $kyc_data['date_of_birth'] = sanitize_text_field($_POST['date_of_birth']);
         }
-        
-        // Handle company detail fields  
-        $company_fields = ['full_company_name', 'trading_name', 'company_type', 'type_of_business', 
-                          'company_registration_no', 'company_email', 'company_telephone',
-                          'company_address_line1', 'company_address_line2', 'company_city', 
-                          'company_country', 'company_post_code'];
-        
-        foreach ($company_fields as $field) {
-            if (isset($_POST[$field])) {
-                if ($field === 'company_email') {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
-                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
-                }
-            }
+        if (isset($_POST['email'])) {
+            $kyc_data['email'] = sanitize_email($_POST['email']);
         }
-        
-        // Handle affiliate sites
-        if (isset($_POST['affiliate_sites'])) {
-            $kyc_data['affiliate_sites'] = sanitize_textarea_field($_POST['affiliate_sites']);
+        if (isset($_POST['nationality'])) {
+            $kyc_data['nationality'] = sanitize_text_field($_POST['nationality']);
         }
-        
-        // Handle directors list (JSON)
-        if (isset($_POST['directors']) && is_array($_POST['directors'])) {
-            $directors = [];
-            foreach ($_POST['directors'] as $director) {
-                if (isset($director['name']) && isset($director['position'])) {
-                    $directors[] = [
-                        'name' => sanitize_text_field($director['name']),
-                        'position' => sanitize_text_field($director['position'])
-                    ];
-                }
-            }
-            $kyc_data['list_of_directors'] = json_encode($directors);
+        if (isset($_POST['mobile_number'])) {
+            $kyc_data['mobile_number'] = sanitize_text_field($_POST['mobile_number']);
         }
-        
-        // Handle shareholders list (JSON)
-        if (isset($_POST['shareholders']) && is_array($_POST['shareholders'])) {
-            $shareholders = [];
-            foreach ($_POST['shareholders'] as $shareholder) {
-                if (isset($shareholder['name']) && isset($shareholder['percentage'])) {
-                    $shareholders[] = [
-                        'name' => sanitize_text_field($shareholder['name']),
-                        'percentage' => floatval($shareholder['percentage'])
-                    ];
-                }
-            }
-            $kyc_data['list_of_shareholders'] = json_encode($shareholders);
+        if (isset($_POST['affiliate_type'])) {
+            $kyc_data['affiliate_type'] = sanitize_text_field($_POST['affiliate_type']);
         }
         if (isset($_POST['address_line1'])) {
             $kyc_data['address_line1'] = sanitize_text_field($_POST['address_line1']);
@@ -3936,27 +4004,24 @@ class AffiliatePortal {
         
         // Handle Company-specific fields
         if (strtolower($account_type) === 'company') {
-            // Basic company fields from forms
-            if (isset($_POST['company_name'])) {
-                $kyc_data['company_name'] = sanitize_text_field($_POST['company_name']);
-            }
-            if (isset($_POST['business_registration_number'])) {
-                $kyc_data['business_registration_number'] = sanitize_text_field($_POST['business_registration_number']);
-            }
+            // Business contact person fields
             if (isset($_POST['business_contact_name'])) {
                 $kyc_data['business_contact_name'] = sanitize_text_field($_POST['business_contact_name']);
             }
-            if (isset($_POST['business_email'])) {
-                $kyc_data['business_email'] = sanitize_email($_POST['business_email']);
+            if (isset($_POST['business_contact_job_title'])) {
+                $kyc_data['business_contact_job_title'] = sanitize_text_field($_POST['business_contact_job_title']);
             }
-            if (isset($_POST['business_phone'])) {
-                $kyc_data['business_phone'] = sanitize_text_field($_POST['business_phone']);
+            if (isset($_POST['business_contact_email'])) {
+                $kyc_data['business_contact_email'] = sanitize_email($_POST['business_contact_email']);
             }
-            if (isset($_POST['business_address'])) {
-                $kyc_data['business_address'] = sanitize_textarea_field($_POST['business_address']);
+            if (isset($_POST['business_contact_phone'])) {
+                $kyc_data['business_contact_phone'] = sanitize_text_field($_POST['business_contact_phone']);
             }
             
-            // Advanced company fields
+            // Company details including trading name
+            if (isset($_POST['company_trading_name'])) {
+                $kyc_data['company_trading_name'] = sanitize_text_field($_POST['company_trading_name']);
+            }
             if (isset($_POST['company_type'])) {
                 $kyc_data['company_type'] = sanitize_text_field($_POST['company_type']);
             }
@@ -3969,41 +4034,35 @@ class AffiliatePortal {
             if (isset($_POST['incorporation_date'])) {
                 $kyc_data['incorporation_date'] = sanitize_text_field($_POST['incorporation_date']);
             }
+            if (isset($_POST['affiliate_urls'])) {
+                $kyc_data['affiliate_urls'] = sanitize_textarea_field($_POST['affiliate_urls']);
+            }
+            if (isset($_POST['shareholdings'])) {
+                $kyc_data['shareholdings'] = sanitize_textarea_field($_POST['shareholdings']);
+            }
             
-            // Handle directors list - stored as JSON
+            // Handle directors list - stored as JSON from dynamic form
             if (isset($_POST['directors']) && is_array($_POST['directors'])) {
                 $directors = array();
-                foreach ($_POST['directors'] as $director) {
+                foreach ($_POST['directors'] as $index => $director) {
                     if (!empty($director['name']) && !empty($director['position'])) {
                         $directors[] = array(
                             'name' => sanitize_text_field($director['name']),
                             'position' => sanitize_text_field($director['position']),
-                            'nationality' => isset($director['nationality']) ? sanitize_text_field($director['nationality']) : '',
-                            'id_document' => isset($director['id_document']) ? sanitize_text_field($director['id_document']) : ''
+                            'ownership' => isset($director['ownership']) ? floatval($director['ownership']) : 0,
+                            'id_document_uploaded' => !empty($_FILES['directors'][$index]['id_document']['name'])
                         );
                     }
                 }
                 $kyc_data['directors_list'] = json_encode($directors);
             }
-            
-            // Handle shareholdings list - stored as JSON
-            if (isset($_POST['shareholders']) && is_array($_POST['shareholders'])) {
-                $shareholders = array();
-                foreach ($_POST['shareholders'] as $shareholder) {
-                    if (!empty($shareholder['name']) && !empty($shareholder['percentage'])) {
-                        $shareholders[] = array(
-                            'name' => sanitize_text_field($shareholder['name']),
-                            'percentage' => floatval($shareholder['percentage']),
-                            'type' => isset($shareholder['type']) ? sanitize_text_field($shareholder['type']) : 'individual'
-                        );
-                    }
-                }
-                $kyc_data['shareholdings'] = json_encode($shareholders);
-            }
         }
         
-        // Handle document uploads
-        $upload_dir = AFFILIATE_PORTAL_PATH . 'uploads/kyc-documents/';
+        // Handle document uploads using WordPress upload directory
+        $wp_upload_dir = wp_upload_dir();
+        $upload_dir = $wp_upload_dir['basedir'] . '/kyc-documents/';
+        $upload_url = $wp_upload_dir['baseurl'] . '/kyc-documents/';
+        
         if (!file_exists($upload_dir)) {
             wp_mkdir_p($upload_dir);
         }
@@ -4012,7 +4071,7 @@ class AffiliatePortal {
         
         // Identity document upload (from our forms - name="identification")
         if (isset($_FILES['identification']) && $_FILES['identification']['error'] === UPLOAD_ERR_OK) {
-            $identity_doc_url = $this->handle_file_upload($_FILES['identification'], $upload_dir, $user_id . '_identity_document');
+            $identity_doc_url = $this->handle_file_upload($_FILES['identification'], $upload_dir, $upload_url, $user_id . '_identity_document');
             if ($identity_doc_url) {
                 $kyc_data['identification_url'] = $identity_doc_url;
                 $kyc_data['identity_document_url'] = $identity_doc_url; // Also store in the advanced field
@@ -4021,7 +4080,7 @@ class AffiliatePortal {
         
         // Address proof upload (from our forms - name="address_proof")
         if (isset($_FILES['address_proof']) && $_FILES['address_proof']['error'] === UPLOAD_ERR_OK) {
-            $address_proof_url = $this->handle_file_upload($_FILES['address_proof'], $upload_dir, $user_id . '_address_proof');
+            $address_proof_url = $this->handle_file_upload($_FILES['address_proof'], $upload_dir, $upload_url, $user_id . '_address_proof');
             if ($address_proof_url) {
                 $kyc_data['address_proof_url'] = $address_proof_url;
             }
@@ -4029,7 +4088,7 @@ class AffiliatePortal {
         
         // Bank statement upload
         if (isset($_FILES['bank_statement']) && $_FILES['bank_statement']['error'] === UPLOAD_ERR_OK) {
-            $bank_statement_url = $this->handle_file_upload($_FILES['bank_statement'], $upload_dir, $user_id . '_bank_statement');
+            $bank_statement_url = $this->handle_file_upload($_FILES['bank_statement'], $upload_dir, $upload_url, $user_id . '_bank_statement');
             if ($bank_statement_url) {
                 $kyc_data['bank_statement_url'] = $bank_statement_url;
             }
@@ -4037,9 +4096,17 @@ class AffiliatePortal {
         
         // Individual-specific document uploads
         if (strtolower($account_type) === 'individual') {
+            // Identity document upload (from individual form)
+            if (isset($_FILES['identity_document']) && $_FILES['identity_document']['error'] === UPLOAD_ERR_OK) {
+                $identity_doc_url = $this->handle_file_upload($_FILES['identity_document'], $upload_dir, $upload_url, $user_id . '_identity_document');
+                if ($identity_doc_url) {
+                    $kyc_data['identity_document_url'] = $identity_doc_url;
+                }
+            }
+            
             // Selfie upload
             if (isset($_FILES['selfie']) && $_FILES['selfie']['error'] === UPLOAD_ERR_OK) {
-                $selfie_url = $this->handle_file_upload($_FILES['selfie'], $upload_dir, $user_id . '_selfie');
+                $selfie_url = $this->handle_file_upload($_FILES['selfie'], $upload_dir, $upload_url, $user_id . '_selfie');
                 if ($selfie_url) {
                     $kyc_data['selfie_url'] = $selfie_url;
                 }
@@ -4047,7 +4114,7 @@ class AffiliatePortal {
             
             // Passport upload
             if (isset($_FILES['passport']) && $_FILES['passport']['error'] === UPLOAD_ERR_OK) {
-                $passport_url = $this->handle_file_upload($_FILES['passport'], $upload_dir, $user_id . '_passport');
+                $passport_url = $this->handle_file_upload($_FILES['passport'], $upload_dir, $upload_url, $user_id . '_passport');
                 if ($passport_url) {
                     $kyc_data['passport_url'] = $passport_url;
                 }
@@ -4058,7 +4125,7 @@ class AffiliatePortal {
         if (strtolower($account_type) === 'company') {
             // Company registration certificate
             if (isset($_FILES['company_registration_certificate']) && $_FILES['company_registration_certificate']['error'] === UPLOAD_ERR_OK) {
-                $company_reg_url = $this->handle_file_upload($_FILES['company_registration_certificate'], $upload_dir, $user_id . '_company_registration');
+                $company_reg_url = $this->handle_file_upload($_FILES['company_registration_certificate'], $upload_dir, $upload_url, $user_id . '_company_registration');
                 if ($company_reg_url) {
                     $kyc_data['company_registration_certificate_url'] = $company_reg_url;
                 }
@@ -4066,7 +4133,7 @@ class AffiliatePortal {
             
             // Business license upload
             if (isset($_FILES['business_license']) && $_FILES['business_license']['error'] === UPLOAD_ERR_OK) {
-                $business_license_url = $this->handle_file_upload($_FILES['business_license'], $upload_dir, $user_id . '_business_license');
+                $business_license_url = $this->handle_file_upload($_FILES['business_license'], $upload_dir, $upload_url, $user_id . '_business_license');
                 if ($business_license_url) {
                     $kyc_data['business_license_url'] = $business_license_url;
                 }
@@ -4075,14 +4142,20 @@ class AffiliatePortal {
         
         $kyc_table = $wpdb->prefix . 'affiliate_kyc';
         
+        error_log('KYC Submission: About to save data to table: ' . $kyc_table);
+        error_log('KYC Submission: Data to save: ' . print_r($kyc_data, true));
+        
         // Check if KYC record already exists
         $existing_kyc = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $kyc_table WHERE user_id = %d",
             $user_id
         ));
         
+        error_log('KYC Submission: Existing record found: ' . ($existing_kyc ? 'YES' : 'NO'));
+        
         if ($existing_kyc) {
             // Update existing record
+            error_log('KYC Submission: Attempting UPDATE for user_id: ' . $user_id);
             $result = $wpdb->update(
                 $kyc_table,
                 $kyc_data,
@@ -4090,28 +4163,38 @@ class AffiliatePortal {
             );
             
             error_log('KYC Update - User ID: ' . $user_id . ', Result: ' . ($result !== false ? 'SUCCESS' : 'FAILED'));
+            error_log('KYC Update - Last Query: ' . $wpdb->last_query);
             if ($wpdb->last_error) {
                 error_log('KYC Update Error: ' . $wpdb->last_error);
             }
         } else {
             // Insert new record
+            error_log('KYC Submission: Attempting INSERT for user_id: ' . $user_id);
             $result = $wpdb->insert($kyc_table, $kyc_data);
             
             error_log('KYC Insert - User ID: ' . $user_id . ', Result: ' . ($result !== false ? 'SUCCESS' : 'FAILED'));
+            error_log('KYC Insert - Last Query: ' . $wpdb->last_query);
             if ($wpdb->last_error) {
                 error_log('KYC Insert Error: ' . $wpdb->last_error);
             }
         }
         
         if ($result !== false) {
+            // Debug logging for successful KYC submission
+            error_log('KYC submission successful for User ID: ' . $user_id);
+            error_log('KYC Action: ' . $kyc_action);
+            error_log('KYC Status set to: ' . $kyc_data['kyc_status']);
+            
             // Update user status when KYC is submitted (not draft)
+            // Status flow: "kyc pending" -> "awaiting approval" after KYC submission
             if ($kyc_action !== 'draft') {
                 $users_table = $wpdb->prefix . 'affiliate_users';
-                $wpdb->update(
+                $status_update = $wpdb->update(
                     $users_table,
                     array('status' => 'awaiting approval'),
                     array('id' => $user_id)
                 );
+                error_log('User status updated from "kyc pending" to "awaiting approval" for User ID: ' . $user_id . ', Result: ' . ($status_update !== false ? 'SUCCESS' : 'FAILED'));
             }
             
             // Send success message based on language context
@@ -4150,6 +4233,139 @@ class AffiliatePortal {
         }
     }
     
+    public function handle_resubmit_kyc() {
+        if (!wp_verify_nonce($_POST['nonce'], 'affiliate_nonce')) {
+            wp_send_json_error('Security check failed');
+            return;
+        }
+        
+        // Check if user is logged in
+        $user_id = $this->get_current_user_id();
+        if (!$user_id) {
+            wp_send_json_error('User not logged in');
+            return;
+        }
+        
+        global $wpdb;
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        
+        // Update user status to "awaiting approval" when resubmitting
+        $status_update = $wpdb->update(
+            $users_table,
+            array('status' => 'awaiting approval'),
+            array('id' => $user_id)
+        );
+        
+        if ($status_update !== false) {
+            error_log('KYC Resubmission: Status updated to "awaiting approval" for User ID: ' . $user_id);
+            
+            // Send notification to admin about resubmission
+            $this->send_resubmission_notification($user_id);
+            
+            // Detect language context for response
+            $is_portuguese = false;
+            if (isset($_SERVER['HTTP_REFERER'])) {
+                $referrer = $_SERVER['HTTP_REFERER'];
+                if (strpos($referrer, 'afiliado') !== false || strpos($referrer, 'pt') !== false) {
+                    $is_portuguese = true;
+                }
+            }
+            
+            $message = $is_portuguese ? 
+                'Aplicação KYC reenviada com sucesso! Status alterado para "Aguardando Aprovação".' : 
+                'KYC application resubmitted successfully! Status changed to "Awaiting Approval".';
+                
+            wp_send_json_success($message);
+        } else {
+            error_log('KYC Resubmission: Failed to update status for User ID: ' . $user_id);
+            
+            $is_portuguese = false;
+            if (isset($_SERVER['HTTP_REFERER'])) {
+                $referrer = $_SERVER['HTTP_REFERER'];
+                if (strpos($referrer, 'afiliado') !== false || strpos($referrer, 'pt') !== false) {
+                    $is_portuguese = true;
+                }
+            }
+            
+            $error_message = $is_portuguese ? 
+                'Falha ao reenviar aplicação KYC' : 
+                'Failed to resubmit KYC application';
+                
+            wp_send_json_error($error_message);
+        }
+    }
+    
+    private function send_resubmission_notification($user_id) {
+        global $wpdb;
+        $users_table = $wpdb->prefix . 'affiliate_users';
+        $user = $wpdb->get_row($wpdb->prepare("SELECT * FROM $users_table WHERE id = %d", $user_id));
+        
+        if (!$user) {
+            return;
+        }
+        
+        // Get admin email configuration
+        $admin_emails_config = get_option('affiliate_admin_emails', '');
+        $admin_emails = $admin_emails_config ? explode(',', $admin_emails_config) : array('admin@gem-affiliate.com');
+        
+        // Detect language context
+        $is_portuguese = false;
+        if (isset($_SERVER['HTTP_REFERER'])) {
+            $referrer = $_SERVER['HTTP_REFERER'];
+            if (strpos($referrer, 'afiliado') !== false || strpos($referrer, 'pt') !== false) {
+                $is_portuguese = true;
+            }
+        }
+        
+        // Send notification to admins
+        if ($is_portuguese) {
+            $admin_subject = 'KYC Reenviado - Aplicação Requer Revisão - GEM AFFILIATE';
+            $admin_message = "
+Uma aplicação KYC foi reenviada para revisão:
+
+Detalhes do Usuário:
+- Nome: {$user->first_name} {$user->last_name}
+- Email: {$user->email}
+- Username: {$user->username}
+- Data de Reenvio: " . current_time('j \d\e F \d\e Y \à\s H:i') . "
+
+O usuário reenviou sua aplicação KYC após o status 'documento adicional necessário'.
+A aplicação agora está com status 'Aguardando Aprovação' e requer revisão da equipe administrativa.
+
+Acesse o painel administrativo para revisar e processar esta aplicação.
+
+Atenciosamente,
+Sistema GEM AFFILIATE
+";
+        } else {
+            $admin_subject = 'KYC Resubmitted - Application Requires Review - GEM AFFILIATE';
+            $admin_message = "
+A KYC application has been resubmitted for review:
+
+User Details:
+- Name: {$user->first_name} {$user->last_name}
+- Email: {$user->email}
+- Username: {$user->username}
+- Resubmission Date: " . current_time('F j, Y \a\t g:i A') . "
+
+The user has resubmitted their KYC application after 'additional document required' status.
+The application is now 'Awaiting Approval' and requires administrative team review.
+
+Please access the admin dashboard to review and process this application.
+
+Best regards,
+GEM AFFILIATE System
+";
+        }
+        
+        foreach ($admin_emails as $admin_email) {
+            wp_mail(trim($admin_email), $admin_subject, $admin_message, array(
+                'From: GEM AFFILIATE <support@gem-affiliate.com>',
+                'Content-Type: text/plain; charset=UTF-8'
+            ));
+        }
+    }
+    
     public function handle_kyc_draft_save() {
         if (!wp_verify_nonce($_POST['nonce'], 'affiliate_nonce')) {
             wp_send_json_error('Security check failed');
@@ -4157,13 +4373,11 @@ class AffiliatePortal {
         }
         
         // Check if user is logged in
-        $auth_data = $this->is_user_authenticated();
-        if (!$auth_data) {
+        $user_id = $this->get_current_user_id();
+        if (!$user_id) {
             wp_send_json_error('User not logged in');
             return;
         }
-        
-        $user_id = $auth_data['user_id'];
         
         // Ensure KYC table exists before attempting to save data
         if (!$this->ensure_kyc_table_exists()) {
@@ -4176,7 +4390,7 @@ class AffiliatePortal {
         // Get account type to determine which fields to process
         $account_type = sanitize_text_field($_POST['account_type']);
         
-        // Prepare data for the new KYC table structure
+        // Prepare data for draft saving with minimal validation
         $kyc_data = array(
             'user_id' => $user_id,
             'account_type' => $account_type,
@@ -4184,59 +4398,56 @@ class AffiliatePortal {
             'submitted_at' => current_time('mysql')
         );
 
-        // Handle individual form fields
-        $individual_fields = ['full_name', 'date_of_birth', 'email', 'nationality', 'mobile_number', 'affiliate_type', 
-                             'address_line1', 'address_line2', 'city', 'country', 'post_code'];
+        // Handle basic form fields from KYC forms (minimal processing for draft)
+        $fields_to_save = array(
+            'full_name', 'date_of_birth', 'email', 'nationality', 'mobile_number', 
+            'affiliate_type', 'address_line1', 'address_line2', 'city', 'country', 
+            'post_code', 'identity_document_type', 'identity_document_number', 
+            'identity_document_expiry', 'address_proof_type'
+        );
         
-        foreach ($individual_fields as $field) {
+        foreach ($fields_to_save as $field) {
             if (isset($_POST[$field])) {
-                if ($field === 'email') {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
-                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
-                }
+                $kyc_data[$field] = sanitize_text_field($_POST[$field]);
             }
         }
         
-        // Handle company contact fields
-        $company_contact_fields = ['business_contact_name', 'job_title', 'business_email', 'business_telephone'];
-        
-        foreach ($company_contact_fields as $field) {
-            if (isset($_POST[$field])) {
-                if ($field === 'business_email') {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
+        // Handle Company-specific fields for draft (include ALL company fields)
+        if (strtolower($account_type) === 'company') {
+            $company_fields = array(
+                'company_trading_name', 'company_type', 'registration_number', 'tax_id', 'incorporation_date',
+                'business_contact_name', 'business_contact_job_title', 'business_contact_email', 
+                'business_contact_phone', 'business_email', 'business_phone', 'business_address'
+            );
+            
+            foreach ($company_fields as $field) {
+                if (isset($_POST[$field])) {
                     $kyc_data[$field] = sanitize_text_field($_POST[$field]);
                 }
             }
-        }
-        
-        // Handle company detail fields  
-        $company_fields = ['full_company_name', 'trading_name', 'company_type', 'type_of_business', 
-                          'company_registration_no', 'company_email', 'company_telephone',
-                          'company_address_line1', 'company_address_line2', 'company_city', 
-                          'company_country', 'company_post_code'];
-        
-        foreach ($company_fields as $field) {
-            if (isset($_POST[$field])) {
-                if (strpos($field, 'email') !== false) {
-                    $kyc_data[$field] = sanitize_email($_POST[$field]);
-                } else {
-                    $kyc_data[$field] = sanitize_text_field($_POST[$field]);
-                }
+            
+            // Handle textarea fields
+            if (isset($_POST['shareholdings'])) {
+                $kyc_data['shareholdings'] = sanitize_textarea_field($_POST['shareholdings']);
             }
-        }
-        
-        if (isset($_POST['affiliate_sites'])) {
-            $kyc_data['affiliate_sites'] = sanitize_textarea_field($_POST['affiliate_sites']);
-        }
-        
-        // Additional KYC fields
-        if (isset($_POST['identity_document_type'])) {
-            $kyc_data['identity_document_type'] = sanitize_text_field($_POST['identity_document_type']);
-        }
-        if (isset($_POST['identity_document_number'])) {
-            $kyc_data['identity_document_number'] = sanitize_text_field($_POST['identity_document_number']);
+            if (isset($_POST['affiliate_urls'])) {
+                $kyc_data['affiliate_urls'] = sanitize_textarea_field($_POST['affiliate_urls']);
+            }
+            
+            // Handle directors list for draft (basic saving)
+            if (isset($_POST['directors']) && is_array($_POST['directors'])) {
+                $directors = array();
+                foreach ($_POST['directors'] as $director) {
+                    if (!empty($director['name'])) {
+                        $directors[] = array(
+                            'name' => sanitize_text_field($director['name']),
+                            'position' => isset($director['position']) ? sanitize_text_field($director['position']) : '',
+                            'ownership' => isset($director['ownership']) ? floatval($director['ownership']) : 0
+                        );
+                    }
+                }
+                $kyc_data['directors_list'] = json_encode($directors);
+            }
         }
         
         $kyc_table = $wpdb->prefix . 'affiliate_kyc';
@@ -4287,8 +4498,8 @@ class AffiliatePortal {
         }
     }
     
-    private function handle_file_upload($file, $upload_dir, $file_prefix) {
-        $allowed_types = array('pdf', 'jpg', 'jpeg', 'png');
+    private function handle_file_upload($file, $upload_dir, $upload_url, $file_prefix) {
+        $allowed_types = array('pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx');
         $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         
         if (!in_array($file_extension, $allowed_types)) {
@@ -4299,16 +4510,96 @@ class AffiliatePortal {
             return false;
         }
         
-        $filename = $file_prefix . '_' . time() . '.' . $file_extension;
+        // Generate unique filename with timestamp
+        $filename = $file_prefix . '_' . time() . '_' . wp_generate_password(8, false) . '.' . $file_extension;
         $file_path = $upload_dir . $filename;
         
+        // Move uploaded file to WordPress uploads directory
         if (move_uploaded_file($file['tmp_name'], $file_path)) {
-            return plugin_dir_url(__FILE__) . 'uploads/kyc-documents/' . $filename;
+            // Return the full URL to the uploaded file
+            return $upload_url . $filename;
         }
         
         return false;
     }
     
+    // Format KYC confirmation email content using email template
+    private function format_kyc_confirmation_content($user, $kyc_data, $is_portuguese = false) {
+        if ($is_portuguese) {
+            return "
+                <h2 style='color: #667eea; margin-top: 0; font-size: 24px;'>📋 Documentos KYC Recebidos!</h2>
+                <p style='font-size: 16px; line-height: 1.6; color: #333;'>Prezado(a) <strong>{$user->first_name} {$user->last_name}</strong>,</p>
+                
+                <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                    Recebemos com sucesso sua documentação KYC (Conheça Seu Cliente). Obrigado por enviar todas as informações necessárias.
+                </p>
+                
+                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;'>
+                    <h3 style='color: #495057; margin-top: 0; font-size: 18px;'>📝 Detalhes da Aplicação:</h3>
+                    <table style='width: 100%; border-collapse: collapse;'>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Nome Completo:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['full_name'] ?? 'N/A') . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Email:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['email'] ?? $user->email) . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Nacionalidade:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['nationality'] ?? 'N/A') . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Tipo de Afiliado:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['affiliate_type'] ?? 'N/A') . "</td></tr>
+                    </table>
+                </div>
+                
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                    <h3 style='margin: 0 0 15px 0; font-size: 18px;'>⏰ Próximos Passos:</h3>
+                    <ol style='margin: 0; padding-left: 20px; line-height: 1.8;'>
+                        <li>Nossa equipe de conformidade irá revisar sua documentação KYC</li>
+                        <li>Podemos entrar em contato caso precisemos de informações adicionais</li>
+                        <li>Você será notificado por email assim que a análise for concluída</li>
+                        <li>O processamento normalmente leva de 3 a 5 dias úteis</li>
+                    </ol>
+                </div>
+                
+                <div style='background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2196f3;'>
+                    <h4 style='color: #1976d2; margin: 0 0 10px 0; font-size: 16px;'>💻 Status da Aplicação</h4>
+                    <p style='margin: 0; color: #6c757d; line-height: 1.5;'>
+                        Você pode verificar o status da sua aplicação fazendo login no seu painel de afiliado a qualquer momento.
+                    </p>
+                </div>
+            ";
+        } else {
+            return "
+                <h2 style='color: #667eea; margin-top: 0; font-size: 24px;'>📋 KYC Documents Received!</h2>
+                <p style='font-size: 16px; line-height: 1.6; color: #333;'>Dear <strong>{$user->first_name} {$user->last_name}</strong>,</p>
+                
+                <p style='font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 25px;'>
+                    We have successfully received your KYC (Know Your Customer) documentation. Thank you for submitting all the required information.
+                </p>
+                
+                <div style='background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;'>
+                    <h3 style='color: #495057; margin-top: 0; font-size: 18px;'>📝 Application Details:</h3>
+                    <table style='width: 100%; border-collapse: collapse;'>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Full Name:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['full_name'] ?? 'N/A') . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Email:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['email'] ?? $user->email) . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Nationality:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['nationality'] ?? 'N/A') . "</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: 600; color: #495057;'>Affiliate Type:</td><td style='padding: 8px 0; color: #6c757d;'>" . ($kyc_data['affiliate_type'] ?? 'N/A') . "</td></tr>
+                    </table>
+                </div>
+                
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 25px 0;'>
+                    <h3 style='margin: 0 0 15px 0; font-size: 18px;'>⏰ What Happens Next:</h3>
+                    <ol style='margin: 0; padding-left: 20px; line-height: 1.8;'>
+                        <li>Our compliance team will review your KYC documentation</li>
+                        <li>We may contact you if additional information is required</li>
+                        <li>You will be notified via email once the review is complete</li>
+                        <li>Processing typically takes 3-5 business days</li>
+                    </ol>
+                </div>
+                
+                <div style='background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2196f3;'>
+                    <h4 style='color: #1976d2; margin: 0 0 10px 0; font-size: 16px;'>💻 Application Status</h4>
+                    <p style='margin: 0; color: #6c757d; line-height: 1.5;'>
+                        You can check your application status by logging into your affiliate dashboard at any time.
+                    </p>
+                </div>
+            ";
+        }
+    }
+
     private function send_kyc_notifications($user_id, $kyc_data, $is_portuguese = false) {
         global $wpdb;
         $users_table = $wpdb->prefix . 'affiliate_users';
@@ -4375,9 +4666,12 @@ GEM AFFILIATE Team
 ";
         }
 
-        wp_mail($user->email, $user_subject, $user_message, array(
+        // Use branded email template for user notification
+        $formatted_user_message = $this->get_email_template($user_subject, $this->format_kyc_confirmation_content($user, $kyc_data, $is_portuguese), $is_portuguese);
+        
+        wp_mail($user->email, $user_subject, $formatted_user_message, array(
             'From: GEM AFFILIATE <support@gem-affiliate.com>',
-            'Content-Type: text/plain; charset=UTF-8'
+            'Content-Type: text/html; charset=UTF-8'
         ));
         
         // Send notification to admin
@@ -4517,27 +4811,53 @@ Submitted on: " . current_time('F j, Y \a\t g:i A') . "
         $users_table = $wpdb->prefix . 'affiliate_users';
         $user_id = intval($_POST['user_id']);
         
-        // Get KYC details with user information
-        $query = "
-            SELECT 
-                k.*,
-                u.username,
-                u.email,
-                u.type as affiliate_type,
-                u.created_at as registration_date
-            FROM $kyc_table k 
-            INNER JOIN $users_table u ON k.user_id = u.id 
-            WHERE k.user_id = %d
-        ";
+        // Get user information first (always exists)
+        $user_query = "SELECT * FROM $users_table WHERE id = %d";
+        $user_data = $wpdb->get_row($wpdb->prepare($user_query, $user_id));
         
-        $kyc_data = $wpdb->get_row($wpdb->prepare($query, $user_id));
-        
-        if (!$kyc_data) {
-            wp_send_json_error('KYC data not found');
+        if (!$user_data) {
+            wp_send_json_error('User not found');
             return;
         }
         
-        wp_send_json_success($kyc_data);
+        // Get KYC details if they exist (may not exist for kyc pending status)
+        $kyc_query = "SELECT * FROM $kyc_table WHERE user_id = %d";
+        $kyc_data = $wpdb->get_row($wpdb->prepare($kyc_query, $user_id));
+        
+        // Combine user data with KYC data
+        $combined_data = array(
+            'user_id' => $user_data->id,
+            'username' => $user_data->username,
+            'email' => $user_data->email,
+            'full_name' => ($user_data->name_prefix ? $user_data->name_prefix . ' ' : '') . $user_data->first_name . ' ' . $user_data->last_name,
+            'date_of_birth' => $user_data->dob,
+            'nationality' => $user_data->country,
+            'mobile_number' => ($user_data->country_code ? '+' . $user_data->country_code . ' ' : '') . $user_data->mobile_number,
+            'account_type' => $user_data->type,
+            'affiliate_type' => $user_data->type,
+            'address_line1' => $user_data->address_line1,
+            'address_line2' => $user_data->address_line2,
+            'city' => $user_data->city,
+            'country' => $user_data->country,
+            'post_code' => $user_data->zipcode,
+            'registration_date' => $user_data->created_at,
+            'status' => $user_data->status,
+            'admin_remarks' => $user_data->admin_remarks
+        );
+        
+        // If KYC data exists, merge it in
+        if ($kyc_data) {
+            $kyc_array = (array) $kyc_data;
+            $combined_data = array_merge($combined_data, $kyc_array);
+        } else {
+            // Set default values for missing KYC fields
+            $combined_data['identity_document_url'] = null;
+            $combined_data['address_proof_url'] = null;
+            $combined_data['bank_statement_url'] = null;
+            $combined_data['kyc_status'] = 'pending';
+        }
+        
+        wp_send_json_success($combined_data);
     }
     
     public function update_kyc_status() {
@@ -4547,45 +4867,44 @@ Submitted on: " . current_time('F j, Y \a\t g:i A') . "
             return;
         }
         
-        if (!isset($_POST['user_id']) || !isset($_POST['kyc_status'])) {
-            wp_send_json_error('User ID and KYC status are required');
+        if (!isset($_POST['user_id']) || !isset($_POST['application_status'])) {
+            wp_send_json_error('User ID and application status are required');
             return;
         }
         
         global $wpdb;
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
         $users_table = $wpdb->prefix . 'affiliate_users';
         
         $user_id = intval($_POST['user_id']);
-        $kyc_status = sanitize_text_field($_POST['kyc_status']);
+        $application_status = sanitize_text_field($_POST['application_status']);
         $admin_comments = isset($_POST['admin_comments']) ? sanitize_textarea_field($_POST['admin_comments']) : '';
         
-        // Validate status
-        $valid_statuses = array('pending', 'approved', 'rejected', 'incomplete', 'submitted');
-        if (!in_array($kyc_status, $valid_statuses)) {
-            wp_send_json_error('Invalid KYC status');
+        // Validate status - using application status workflow
+        $valid_statuses = array('approved', 'rejected', 'additional document required');
+        if (!in_array($application_status, $valid_statuses)) {
+            wp_send_json_error('Invalid application status: ' . $application_status . '. Valid statuses are: ' . implode(', ', $valid_statuses));
             return;
         }
         
-        // Require comments for certain statuses
-        if (in_array($kyc_status, array('rejected', 'incomplete')) && empty($admin_comments)) {
-            wp_send_json_error('Admin comments are required when rejecting or marking as incomplete');
+        // Require comments for rejected and additional document required statuses
+        if (in_array($application_status, array('rejected', 'additional document required')) && empty($admin_comments)) {
+            wp_send_json_error('Admin comments are required when rejecting or requesting additional documents');
             return;
         }
         
-        // Update KYC status
+        // Update application status and admin remarks
         $updated = $wpdb->update(
-            $kyc_table,
+            $users_table,
             array(
-                'kyc_status' => $kyc_status,
-                'admin_comments' => $admin_comments,
+                'status' => $application_status,
+                'admin_remarks' => $admin_comments,
                 'updated_at' => current_time('mysql')
             ),
-            array('user_id' => $user_id)
+            array('id' => $user_id)
         );
         
         if ($updated === false) {
-            wp_send_json_error('Failed to update KYC status');
+            wp_send_json_error('Failed to update application status');
             return;
         }
         
@@ -4597,623 +4916,20 @@ Submitted on: " . current_time('F j, Y \a\t g:i A') . "
         
         if ($user) {
             // Send email notification to user
-            $this->send_kyc_status_notification($user, $kyc_status, $admin_comments);
+            $this->send_application_status_notification($user, $application_status, $admin_comments);
         }
         
-        wp_send_json_success('KYC status updated successfully');
+        wp_send_json_success('Application status updated successfully');
     }
     
-    // Handle document approval
-    public function handle_document_approval() {
-        // Check admin authentication
-        if (!$this->is_admin_logged_in()) {
-            wp_send_json_error('Access denied');
-            return;
-        }
-        
-        if (!isset($_POST['user_id']) || !isset($_POST['document_type'])) {
-            wp_send_json_error('User ID and document type are required');
-            return;
-        }
-        
-        global $wpdb;
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
-        
-        $user_id = intval($_POST['user_id']);
-        $document_type = sanitize_text_field($_POST['document_type']);
-        $notes = isset($_POST['notes']) ? sanitize_textarea_field($_POST['notes']) : '';
-        
-        // Valid document types
-        $valid_documents = array(
-            'identity_document', 'address_proof', 'bank_statement', 'selfie', 'passport',
-            'company_registration_certificate', 'company_address_proof', 'business_license', 'directors_id_docs'
-        );
-        
-        if (!in_array($document_type, $valid_documents)) {
-            wp_send_json_error('Invalid document type');
-            return;
-        }
-        
-        // Update document status to approved
-        $status_field = $document_type . '_status';
-        $notes_field = $document_type . '_notes';
-        
-        $updated = $wpdb->update(
-            $kyc_table,
-            array(
-                $status_field => 'approved',
-                $notes_field => $notes,
-                'reviewed_at' => current_time('mysql'),
-                'reviewed_by' => $this->get_current_admin_username()
-            ),
-            array('user_id' => $user_id)
-        );
-        
-        if ($updated === false) {
-            wp_send_json_error('Failed to approve document: ' . $wpdb->last_error);
-            return;
-        }
-        
-        // Check if all documents are approved to update overall status
-        $this->update_overall_kyc_status($user_id);
-        
-        wp_send_json_success('Document approved successfully');
-    }
-    
-    // Handle document rejection
-    public function handle_document_rejection() {
-        // Check admin authentication
-        if (!$this->is_admin_logged_in()) {
-            wp_send_json_error('Access denied');
-            return;
-        }
-        
-        if (!isset($_POST['user_id']) || !isset($_POST['document_type']) || !isset($_POST['notes'])) {
-            wp_send_json_error('User ID, document type, and rejection notes are required');
-            return;
-        }
-        
-        global $wpdb;
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
-        
-        $user_id = intval($_POST['user_id']);
-        $document_type = sanitize_text_field($_POST['document_type']);
-        $notes = sanitize_textarea_field($_POST['notes']);
-        
-        // Valid document types
-        $valid_documents = array(
-            'identity_document', 'address_proof', 'bank_statement', 'selfie', 'passport',
-            'company_registration_certificate', 'company_address_proof', 'business_license', 'directors_id_docs'
-        );
-        
-        if (!in_array($document_type, $valid_documents)) {
-            wp_send_json_error('Invalid document type');
-            return;
-        }
-        
-        if (empty($notes)) {
-            wp_send_json_error('Rejection notes are required');
-            return;
-        }
-        
-        // Update document status to rejected
-        $status_field = $document_type . '_status';
-        $notes_field = $document_type . '_notes';
-        
-        $updated = $wpdb->update(
-            $kyc_table,
-            array(
-                $status_field => 'rejected',
-                $notes_field => $notes,
-                'reviewed_at' => current_time('mysql'),
-                'reviewed_by' => $this->get_current_admin_username(),
-                'overall_status' => 'needs_resubmission'
-            ),
-            array('user_id' => $user_id)
-        );
-        
-        if ($updated === false) {
-            wp_send_json_error('Failed to reject document: ' . $wpdb->last_error);
-            return;
-        }
-        
-        // Send notification to user about rejection
-        $this->send_document_rejection_notification($user_id, $document_type, $notes);
-        
-        wp_send_json_success('Document rejected successfully');
-    }
-    
-    // Get document details for admin review
-    public function get_document_details() {
-        // Check admin authentication
-        if (!$this->is_admin_logged_in()) {
-            wp_send_json_error('Access denied');
-            return;
-        }
-        
-        if (!isset($_POST['user_id'])) {
-            wp_send_json_error('User ID is required');
-            return;
-        }
-        
-        global $wpdb;
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
-        $users_table = $wpdb->prefix . 'affiliate_users';
-        $user_id = intval($_POST['user_id']);
-        
-        // Get KYC details with user information
-        $query = "
-            SELECT 
-                k.*,
-                u.username,
-                u.email,
-                u.first_name,
-                u.last_name
-            FROM $kyc_table k 
-            INNER JOIN $users_table u ON k.user_id = u.id 
-            WHERE k.user_id = %d
-        ";
-        
-        $kyc_data = $wpdb->get_row($wpdb->prepare($query, $user_id));
-        
-        if (!$kyc_data) {
-            wp_send_json_error('User KYC data not found');
-            return;
-        }
-        
-        // Format document information for admin review
-        $documents = array(
-            'identity_document' => array(
-                'url' => $kyc_data->identity_document_url,
-                'status' => $kyc_data->identity_document_status,
-                'notes' => $kyc_data->identity_document_notes,
-                'type' => $kyc_data->identity_document_type,
-                'number' => $kyc_data->identity_document_number,
-                'expiry' => $kyc_data->identity_document_expiry
-            ),
-            'address_proof' => array(
-                'url' => $kyc_data->address_proof_url,
-                'status' => $kyc_data->address_proof_status,
-                'notes' => $kyc_data->address_proof_notes,
-                'type' => $kyc_data->address_proof_type
-            ),
-            'bank_statement' => array(
-                'url' => $kyc_data->bank_statement_url,
-                'status' => $kyc_data->bank_statement_status,
-                'notes' => $kyc_data->bank_statement_notes
-            ),
-            'selfie' => array(
-                'url' => $kyc_data->selfie_url,
-                'status' => $kyc_data->selfie_status,
-                'notes' => $kyc_data->selfie_notes
-            ),
-            'passport' => array(
-                'url' => $kyc_data->passport_url,
-                'status' => $kyc_data->passport_status,
-                'notes' => $kyc_data->passport_notes
-            )
-        );
-        
-        // Add company documents if account type is company
-        if ($kyc_data->account_type === 'company') {
-            $documents['company_registration_certificate'] = array(
-                'url' => $kyc_data->company_registration_certificate_url,
-                'status' => $kyc_data->company_registration_certificate_status,
-                'notes' => $kyc_data->company_registration_certificate_notes
-            );
-            $documents['company_address_proof'] = array(
-                'url' => $kyc_data->company_address_proof_url,
-                'status' => $kyc_data->company_address_proof_status,
-                'notes' => $kyc_data->company_address_proof_notes
-            );
-            $documents['business_license'] = array(
-                'url' => $kyc_data->business_license_url,
-                'status' => $kyc_data->business_license_status,
-                'notes' => $kyc_data->business_license_notes
-            );
-            $documents['directors_id_docs'] = array(
-                'url' => $kyc_data->directors_id_docs_url,
-                'status' => $kyc_data->directors_id_docs_status,
-                'notes' => $kyc_data->directors_id_docs_notes
-            );
-        }
-        
-        wp_send_json_success(array(
-            'user_data' => array(
-                'username' => $kyc_data->username,
-                'email' => $kyc_data->email,
-                'full_name' => trim($kyc_data->first_name . ' ' . $kyc_data->last_name),
-                'account_type' => $kyc_data->account_type,
-                'overall_status' => $kyc_data->overall_status
-            ),
-            'documents' => $documents
-        ));
-    }
-    
-    // Update overall KYC status based on individual document statuses
-    private function update_overall_kyc_status($user_id) {
-        global $wpdb;
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
-        
-        $kyc_data = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $kyc_table WHERE user_id = %d",
-            $user_id
-        ));
-        
-        if (!$kyc_data) {
-            return false;
-        }
-        
-        // Define required documents based on account type
-        $required_docs = array('identity_document', 'address_proof', 'bank_statement', 'selfie');
-        
-        if ($kyc_data->account_type === 'company') {
-            $required_docs = array_merge($required_docs, array(
-                'company_registration_certificate', 'business_license', 'directors_id_docs'
-            ));
-        }
-        
-        $all_approved = true;
-        $has_rejected = false;
-        
-        foreach ($required_docs as $doc) {
-            $status_field = $doc . '_status';
-            $url_field = $doc . '_url';
-            
-            // Skip if document URL is empty (not uploaded)
-            if (empty($kyc_data->$url_field)) {
-                $all_approved = false;
-                continue;
-            }
-            
-            if ($kyc_data->$status_field === 'rejected') {
-                $has_rejected = true;
-                $all_approved = false;
-            } elseif ($kyc_data->$status_field !== 'approved') {
-                $all_approved = false;
-            }
-        }
-        
-        // Determine overall status
-        $overall_status = 'pending_review';
-        if ($has_rejected) {
-            $overall_status = 'needs_resubmission';
-        } elseif ($all_approved) {
-            $overall_status = 'approved';
-        }
-        
-        // Update overall status
-        $wpdb->update(
-            $kyc_table,
-            array('overall_status' => $overall_status),
-            array('user_id' => $user_id)
-        );
-        
-        return $overall_status;
-    }
-    
-    // Send notification to user about document rejection
-    private function send_document_rejection_notification($user_id, $document_type, $notes) {
-        global $wpdb;
-        $users_table = $wpdb->prefix . 'affiliate_users';
-        
-        $user = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $users_table WHERE id = %d",
-            $user_id
-        ));
-        
-        if (!$user) {
-            return false;
-        }
-        
-        $document_names = array(
-            'identity_document' => 'Identity Document',
-            'address_proof' => 'Address Proof',
-            'bank_statement' => 'Bank Statement',
-            'selfie' => 'Selfie',
-            'passport' => 'Passport',
-            'company_registration_certificate' => 'Company Registration Certificate',
-            'company_address_proof' => 'Company Address Proof',
-            'business_license' => 'Business License',
-            'directors_id_docs' => 'Directors ID Documents'
-        );
-        
-        $document_name = isset($document_names[$document_type]) ? $document_names[$document_type] : $document_type;
-        
-        $subject = 'Document Rejection - Action Required';
-        $message = "Dear {$user->first_name},\n\n";
-        $message .= "Your {$document_name} has been rejected and requires resubmission.\n\n";
-        $message .= "Reason for rejection:\n{$notes}\n\n";
-        $message .= "Please log in to your dashboard and resubmit the corrected document.\n\n";
-        $message .= "Thank you,\nAffiliate Portal Team";
-        
-        wp_mail($user->email, $subject, $message);
-        
-        return true;
-    }
-    
-    // Get current admin username for logging
-    private function get_current_admin_username() {
-        $admin_data = $this->is_admin_authenticated();
-        return $admin_data ? $admin_data['username'] : 'unknown';
-    }
-    
-    // Get comprehensive KYC verification details for admin review
-    public function get_kyc_verification_details() {
-        // Check admin authentication
-        if (!$this->is_admin_logged_in()) {
-            wp_send_json_error('Access denied');
-            return;
-        }
-        
-        if (!isset($_POST['user_id'])) {
-            wp_send_json_error('User ID is required');
-            return;
-        }
-        
-        global $wpdb;
-        $user_id = intval($_POST['user_id']);
-        
-        // Get user data
-        $users_table = $wpdb->prefix . 'affiliate_users';
-        $kyc_table = $wpdb->prefix . 'affiliate_kyc';
-        
-        $user = $wpdb->get_row($wpdb->prepare("SELECT * FROM $users_table WHERE id = %d", $user_id));
-        $kyc_data = $wpdb->get_row($wpdb->prepare("SELECT * FROM $kyc_table WHERE user_id = %d", $user_id));
-        
-        if (!$user) {
-            wp_send_json_error('User not found');
-            return;
-        }
-        
-        // Determine if user is individual or company
-        $is_individual = strtolower($user->type ?? '') !== 'company';
-        
-        // Build comprehensive KYC verification HTML
-        $html = $this->build_kyc_verification_html($user, $kyc_data, $is_individual);
-        
-        wp_send_json_success(array('html' => $html));
-    }
-    
-    private function build_kyc_verification_html($user, $kyc_data, $is_individual) {
-        $avatar_initial = strtoupper(substr($user->first_name ?? $user->username, 0, 1));
-        $kyc_status = $kyc_data->kyc_status ?? 'not_submitted';
-        $account_type = $is_individual ? 'Individual' : 'Company';
-        
-        $html = '<div class="kyc-verification-content">';
-        
-        // User Info Header
-        $html .= '<div class="kyc-user-info">';
-        $html .= '<div class="kyc-user-header">';
-        $html .= '<div class="kyc-user-avatar">' . $avatar_initial . '</div>';
-        $html .= '<div class="kyc-user-details">';
-        $html .= '<h3>' . esc_html($user->first_name . ' ' . $user->last_name) . '</h3>';
-        $html .= '<p>' . esc_html($user->email) . ' • ' . esc_html($account_type) . ' Account</p>';
-        $html .= '</div>';
-        $html .= '<div class="kyc-status-badge kyc-status-' . esc_attr($kyc_status) . '">';
-        $html .= '<span>' . ucfirst(str_replace('_', ' ', $kyc_status)) . '</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        // KYC Sections
-        $html .= '<div class="kyc-sections">';
-        
-        if ($is_individual) {
-            $html .= $this->build_individual_kyc_section($user, $kyc_data);
-        } else {
-            $html .= $this->build_company_kyc_section($user, $kyc_data);
-        }
-        
-        // Documents Section
-        $html .= $this->build_documents_section($kyc_data);
-        
-        $html .= '</div>';
-        
-        // Admin Actions Section
-        $html .= $this->build_admin_actions_section($user->id, $kyc_data);
-        
-        $html .= '</div>';
-        
-        return $html;
-    }
-    
-    private function build_individual_kyc_section($user, $kyc_data) {
-        $html = '<div class="kyc-section">';
-        $html .= '<div class="kyc-section-header">';
-        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>';
-        $html .= '</svg>';
-        $html .= '<h4>Individual Information</h4>';
-        $html .= '</div>';
-        
-        $html .= '<div class="kyc-form-grid">';
-        $html .= $this->render_kyc_field('Full Name', $kyc_data->full_name ?? $user->first_name . ' ' . $user->last_name);
-        $html .= $this->render_kyc_field('Date of Birth', $kyc_data->date_of_birth ?? $user->dob);
-        $html .= $this->render_kyc_field('Email', $kyc_data->email ?? $user->email);
-        $html .= $this->render_kyc_field('Mobile Number', $kyc_data->mobile_number ?? $user->mobile_number);
-        $html .= $this->render_kyc_field('Nationality', $kyc_data->nationality ?? 'Not provided');
-        $html .= $this->render_kyc_field('Affiliate Type', $kyc_data->affiliate_type ?? $user->affiliate_type);
-        $html .= $this->render_kyc_field('Address Line 1', $kyc_data->address_line1 ?? $user->address_line1);
-        $html .= $this->render_kyc_field('Address Line 2', $kyc_data->address_line2 ?? $user->address_line2);
-        $html .= $this->render_kyc_field('City', $kyc_data->city ?? $user->city);
-        $html .= $this->render_kyc_field('Country', $kyc_data->country ?? $user->country);
-        $html .= $this->render_kyc_field('Post Code', $kyc_data->post_code ?? $user->zipcode);
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        return $html;
-    }
-    
-    private function build_company_kyc_section($user, $kyc_data) {
-        $html = '<div class="kyc-section">';
-        $html .= '<div class="kyc-section-header">';
-        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>';
-        $html .= '</svg>';
-        $html .= '<h4>Company Information</h4>';
-        $html .= '</div>';
-        
-        $html .= '<div class="kyc-form-grid">';
-        $html .= $this->render_kyc_field('Company Name', $kyc_data->company_name ?? $user->company_name);
-        $html .= $this->render_kyc_field('Business Registration Number', $kyc_data->business_registration_number ?? 'Not provided');
-        $html .= $this->render_kyc_field('Business Contact Name', $kyc_data->business_contact_name ?? 'Not provided');
-        $html .= $this->render_kyc_field('Business Email', $kyc_data->business_email ?? $user->email);
-        $html .= $this->render_kyc_field('Business Phone', $kyc_data->business_phone ?? $user->mobile_number);
-        $html .= $this->render_kyc_field('Business Address', $kyc_data->business_address ?? $user->address_line1);
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        return $html;
-    }
-    
-    private function build_documents_section($kyc_data) {
-        $html = '<div class="kyc-section">';
-        $html .= '<div class="kyc-section-header">';
-        $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>';
-        $html .= '<polyline points="14,2 14,8 20,8"/>';
-        $html .= '</svg>';
-        $html .= '<h4>Uploaded Documents</h4>';
-        $html .= '</div>';
-        
-        $html .= '<div class="kyc-documents-grid">';
-        
-        // Address Proof
-        if (!empty($kyc_data->address_proof_url)) {
-            $html .= $this->render_document_card('Address Proof', $kyc_data->address_proof_url);
-        }
-        
-        // Identity Document
-        if (!empty($kyc_data->identity_document_url)) {
-            $html .= $this->render_document_card('Identity Document', $kyc_data->identity_document_url);
-        }
-        
-        // Bank Statement
-        if (!empty($kyc_data->bank_statement_url)) {
-            $html .= $this->render_document_card('Bank Statement', $kyc_data->bank_statement_url);
-        }
-        
-        // Selfie
-        if (!empty($kyc_data->selfie_url)) {
-            $html .= $this->render_document_card('Selfie', $kyc_data->selfie_url);
-        }
-        
-        // Passport
-        if (!empty($kyc_data->passport_url)) {
-            $html .= $this->render_document_card('Passport', $kyc_data->passport_url);
-        }
-        
-        // Company Registration Certificate
-        if (!empty($kyc_data->company_registration_certificate_url)) {
-            $html .= $this->render_document_card('Company Registration Certificate', $kyc_data->company_registration_certificate_url);
-        }
-        
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        return $html;
-    }
-    
-    private function render_document_card($title, $url) {
-        $is_image = preg_match('/\.(jpg|jpeg|png|gif)$/i', $url);
-        
-        $html = '<div class="kyc-document">';
-        $html .= '<div class="kyc-document-header">';
-        $html .= '<h5 class="kyc-document-title">' . esc_html($title) . '</h5>';
-        $html .= '</div>';
-        $html .= '<div class="kyc-document-content">';
-        
-        if ($is_image) {
-            $html .= '<img src="' . esc_url($url) . '" alt="' . esc_attr($title) . '" class="kyc-document-preview">';
-        } else {
-            $html .= '<div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">';
-            $html .= '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style="color: #6c757d; margin-bottom: 10px;">';
-            $html .= '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>';
-            $html .= '<polyline points="14,2 14,8 20,8"/>';
-            $html .= '</svg>';
-            $html .= '<p style="margin: 0; color: #6c757d;">Document File</p>';
-            $html .= '</div>';
-        }
-        
-        $html .= '<div class="kyc-document-actions">';
-        $html .= '<button type="button" class="kyc-doc-btn kyc-doc-btn-view" onclick="viewDocumentInModal(\'' . esc_url($url) . '\', \'' . esc_attr($title) . '\')">';
-        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
-        $html .= '</svg>';
-        $html .= 'View';
-        $html .= '</button>';
-        $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        return $html;
-    }
-    
-    private function render_kyc_field($label, $value) {
-        return '<div class="kyc-field">' .
-               '<div class="kyc-field-label">' . esc_html($label) . '</div>' .
-               '<div class="kyc-field-value">' . esc_html($value ?: 'Not provided') . '</div>' .
-               '</div>';
-    }
-    
-    private function build_admin_actions_section($user_id, $kyc_data) {
-        $html = '<div class="kyc-admin-actions">';
-        $html .= '<h4>Admin Actions</h4>';
-        
-        // Previous Comments Section
-        if (!empty($kyc_data->admin_comments)) {
-            $html .= '<div class="kyc-previous-comments">';
-            $html .= '<h5>Previous Admin Comments</h5>';
-            $html .= '<div class="kyc-comment-item">';
-            $html .= '<div class="kyc-comment-meta">Previous Review</div>';
-            $html .= '<div class="kyc-comment-text">' . esc_html($kyc_data->admin_comments) . '</div>';
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-        
-        // Comment Section
-        $html .= '<div class="kyc-comment-section">';
-        $html .= '<label for="kycAdminComments">Admin Comments</label>';
-        $html .= '<textarea id="kycAdminComments" class="kyc-comment-textarea" placeholder="Enter your comments for the user. This will be included in the email notification.">' . esc_textarea($kyc_data->admin_comments ?? '') . '</textarea>';
-        $html .= '</div>';
-        
-        // Action Buttons
-        $html .= '<div class="kyc-status-actions">';
-        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-approve" onclick="approveKyc(' . $user_id . ')">';
-        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>';
-        $html .= '</svg>';
-        $html .= 'Approve KYC';
-        $html .= '</button>';
-        
-        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-reject" onclick="rejectKyc(' . $user_id . ')">';
-        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>';
-        $html .= '</svg>';
-        $html .= 'Reject KYC';
-        $html .= '</button>';
-        
-        $html .= '<button type="button" class="kyc-action-btn kyc-action-btn-info" onclick="requestMoreInfo(' . $user_id . ')">';
-        $html .= '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">';
-        $html .= '<path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"/>';
-        $html .= '</svg>';
-        $html .= 'Request More Info';
-        $html .= '</button>';
-        $html .= '</div>';
-        $html .= '</div>';
-        
-        return $html;
-    }
-
-    private function send_kyc_status_notification($user, $status, $admin_comments) {
-        $subject = 'KYC Application Status Update - GEM AFFILIATE';
+    private function send_application_status_notification($user, $status, $admin_comments) {
+        $subject = 'Application Status Update - GEM AFFILIATE';
         
         switch ($status) {
             case 'approved':
                 $status_text = 'approved';
                 $message = "
-Congratulations! Your KYC (Know Your Customer) application has been approved.
+Congratulations! Your affiliate application has been approved.
 
 Your account is now fully verified and you can access all affiliate features.
 
@@ -5227,11 +4943,9 @@ GEM AFFILIATE Team
             case 'rejected':
                 $status_text = 'rejected';
                 $message = "
-We regret to inform you that your KYC (Know Your Customer) application has been rejected.
+We regret to inform you that your affiliate application has been rejected.
 
 Reason: {$admin_comments}
-
-You may resubmit your KYC application with updated information and documents.
 
 If you have any questions, please contact our support team.
 
@@ -5240,14 +4954,14 @@ GEM AFFILIATE Team
 ";
                 break;
                 
-            case 'incomplete':
-                $status_text = 'marked as incomplete';
+            case 'additional document required':
+                $status_text = 'requires additional documents';
                 $message = "
-Your KYC (Know Your Customer) application requires additional information.
+Your affiliate application requires additional information or documents.
 
-Admin Comments: {$admin_comments}
+Requirements: {$admin_comments}
 
-Please log into your dashboard and update your KYC information accordingly.
+Please log into your dashboard and upload the required documents.
 
 If you have any questions, please contact our support team.
 
@@ -5259,7 +4973,7 @@ GEM AFFILIATE Team
             default:
                 $status_text = $status;
                 $message = "
-Your KYC (Know Your Customer) application status has been updated to: {$status}
+Your affiliate application status has been updated to: {$status}
 
 " . (!empty($admin_comments) ? "Admin Comments: {$admin_comments}\n\n" : "") . "
 Please log into your dashboard for more information.
@@ -5282,9 +4996,4 @@ GEM AFFILIATE Team
 // Initialize the plugin
 global $affiliate_portal_instance;
 $affiliate_portal_instance = new AffiliatePortal();
-
-// Handle standalone POST requests for KYC submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'affiliate_submit_kyc') {
-    $affiliate_portal_instance->handle_kyc_submission();
-}
 ?>

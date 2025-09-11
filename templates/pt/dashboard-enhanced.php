@@ -166,6 +166,10 @@ switch (strtolower($actual_status)) {
         $status_class = 'affiliate-status-pending';
         $status_text = 'Aguardando Análise';
         break;
+    case 'kyc pending':
+        $status_class = 'affiliate-status-pending';
+        $status_text = 'KYC Pendente';
+        break;
     case 'rejected':
     case 'denied':
         $status_class = 'affiliate-status-rejected';
@@ -175,9 +179,9 @@ switch (strtolower($actual_status)) {
         $status_class = 'affiliate-status-suspended';
         $status_text = 'Suspenso';
         break;
-    case 'documents_required':
+    case 'additional document required':
         $status_class = 'affiliate-status-documents-required';
-        $status_text = 'Documentos Necessários';
+        $status_text = 'Info. Adicional Necessária';
         break;
     case 'awaiting approval':
         $status_class = 'affiliate-status-awaiting-approval';
@@ -190,7 +194,7 @@ switch (strtolower($actual_status)) {
             $status_text = 'Aguardando Análise';
         } elseif ($current_user->type === 'Company') {
             $status_class = 'affiliate-status-documents-required';
-            $status_text = 'Documentos Necessários';
+            $status_text = 'Info. Adicional Necessária';
         }
 }
 
@@ -822,11 +826,11 @@ $logo_url = get_option('affiliate_portal_logo', '');
         </div>
         <!-- KYC Process Section -->
         <?php
-        // Check user's KYC status to determine what to show
-        $user_kyc_status = $current_user->kyc_status ?? 'pending';
+        // Check user's application status to determine what to show
+        $user_status = $current_user->status ?? 'kyc pending';
         
-        // Show KYC form if status is pending or if KYC is incomplete
-        if (in_array($user_kyc_status, ['pending', 'draft', 'incomplete'])) {
+        // Show KYC form if status is pending or if additional information is required
+        if (in_array($user_status, ['kyc pending', 'additional document required'])) {
             include AFFILIATE_PORTAL_PATH . 'templates/pt/kyc-form.php';
         } else {
             // Show status message for completed/submitted KYC
@@ -842,12 +846,12 @@ $logo_url = get_option('affiliate_portal_logo', '');
                 </div>
                 
                 <div class="kyc-status-container" style="background: rgba(255, 255, 255, 0.98); border-radius: 24px; padding: 40px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1); margin-top: 20px;">
-                    <?php if ($user_kyc_status === 'submitted'): ?>
+                    <?php if ($user_status === 'awaiting approval'): ?>
                         <div style="text-align: center; color: #17a2b8;">
                             <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 20px;">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                             </svg>
-                            <h3 style="color: #17a2b8; margin-bottom: 15px;">Aplicação KYC Enviada</h3>
+                            <h3 style="color: #17a2b8; margin-bottom: 15px;">Aplicação KYC em Análise</h3>
                             <p style="color: #6c757d; font-size: 1.1rem; line-height: 1.6;">
                                 Sua aplicação KYC foi enviada com sucesso e está atualmente em análise. 
                                 Nossa equipe de conformidade processará sua aplicação em 3-5 dias úteis.
@@ -856,7 +860,7 @@ $logo_url = get_option('affiliate_portal_logo', '');
                                 Você receberá uma notificação por email assim que a análise for concluída.
                             </p>
                         </div>
-                    <?php elseif ($user_kyc_status === 'approved'): ?>
+                    <?php elseif ($user_status === 'approved'): ?>
                         <div style="text-align: center; color: #28a745;">
                             <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 20px;">
                                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -867,15 +871,14 @@ $logo_url = get_option('affiliate_portal_logo', '');
                                 Sua conta agora está totalmente verificada e você pode acessar todos os recursos de afiliado.
                             </p>
                         </div>
-                    <?php elseif ($user_kyc_status === 'rejected'): ?>
+                    <?php elseif ($user_status === 'rejected'): ?>
                         <div style="text-align: center; color: #dc3545;">
                             <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 20px;">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                             </svg>
-                            <h3 style="color: #dc3545; margin-bottom: 15px;">Aplicação KYC Precisa de Atenção</h3>
+                            <h3 style="color: #dc3545; margin-bottom: 15px;">Aplicação KYC Rejeitada</h3>
                             <p style="color: #6c757d; font-size: 1.1rem; line-height: 1.6;">
-                                Sua aplicação KYC requer informações ou documentação adicional. 
-                                Por favor, verifique seu email para instruções específicas ou entre em contato com nossa equipe de suporte.
+                                Sua aplicação KYC foi rejeitada. Por favor, revise as notas do administrador abaixo e reenvie com informações atualizadas.
                             </p>
                             <?php if (!empty($admin_remarks)): ?>
                                 <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: left;">
@@ -883,6 +886,32 @@ $logo_url = get_option('affiliate_portal_logo', '');
                                     <span style="color: #721c24;"><?php echo esc_html($admin_remarks); ?></span>
                                 </div>
                             <?php endif; ?>
+                            <div style="margin-top: 20px;">
+                                <button class="affiliate-btn affiliate-btn-primary" onclick="resubmitKYCApplication(this);" style="padding: 12px 24px; font-size: 1rem;">
+                                    Reenviar Aplicação KYC
+                                </button>
+                            </div>
+                        </div>
+                    <?php elseif ($user_status === 'additional document required'): ?>
+                        <div style="text-align: center; color: #ffc107;">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="margin-bottom: 20px;">
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            </svg>
+                            <h3 style="color: #ffc107; margin-bottom: 15px;">Informação Adicional Necessária</h3>
+                            <p style="color: #6c757d; font-size: 1.1rem; line-height: 1.6;">
+                                Sua aplicação KYC requer documentos ou informações adicionais. Por favor, revise os requisitos do administrador abaixo e envie os documentos necessários.
+                            </p>
+                            <?php if (!empty($admin_remarks)): ?>
+                                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: left;">
+                                    <strong style="color: #856404;">Requisitos do Administrador:</strong><br>
+                                    <span style="color: #856404;"><?php echo nl2br(esc_html($admin_remarks)); ?></span>
+                                </div>
+                            <?php endif; ?>
+                            <div style="margin-top: 20px;">
+                                <button class="affiliate-btn affiliate-btn-primary" onclick="scrollToKYCForm(); resubmitKYCApplication(this);" style="padding: 12px 24px; font-size: 1rem;">
+                                    Enviar Documentos Adicionais
+                                </button>
+                            </div>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1104,4 +1133,102 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Cache clearing error (non-critical):', e);
     }
 });
+
+// Add CSS for spinning animation
+const spinCSS = `
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+`;
+const style = document.createElement('style');
+style.textContent = spinCSS;
+document.head.appendChild(style);
+
+// Function to scroll to KYC form for additional documents
+function scrollToKYCForm() {
+    const kycSection = document.querySelector('.affiliate-kyc-section');
+    if (kycSection) {
+        kycSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// Function to resubmit KYC application
+function resubmitKYCApplication(button) {
+    // Store original button content
+    const originalText = button.innerHTML;
+    const originalColor = button.style.backgroundColor;
+    
+    // Show spinning animation
+    button.innerHTML = '<div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></div>Reenviando...';
+    button.disabled = true;
+    button.style.backgroundColor = '#6c757d';
+    button.style.cursor = 'not-allowed';
+    
+    // Prepare AJAX request data
+    const formData = new FormData();
+    formData.append('action', 'affiliate_resubmit_kyc');
+    formData.append('nonce', '<?php echo wp_create_nonce('affiliate_nonce'); ?>');
+    
+    // Send AJAX request
+    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            button.innerHTML = '✓ Reenviado com Sucesso!';
+            button.style.backgroundColor = '#28a745';
+            button.style.cursor = 'pointer';
+            
+            // Show success alert
+            alert(data.data || 'Aplicação KYC reenviada com sucesso! Status alterado para "Aguardando Aprovação".');
+            
+            // Reload page after short delay to show updated status
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            // Show error message
+            button.innerHTML = '✗ Erro no Reenvio';
+            button.style.backgroundColor = '#dc3545';
+            button.style.cursor = 'pointer';
+            
+            // Show error alert
+            alert(data.data || 'Falha ao reenviar aplicação KYC. Tente novamente.');
+            
+            // Reset button after delay
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.style.backgroundColor = originalColor;
+                button.disabled = false;
+                button.style.cursor = 'pointer';
+            }, 3000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Show error message
+        button.innerHTML = '✗ Erro de Conexão';
+        button.style.backgroundColor = '#dc3545';
+        button.style.cursor = 'pointer';
+        
+        // Show error alert
+        alert('Erro de conexão. Por favor, verifique sua conexão com a internet e tente novamente.');
+        
+        // Reset button after delay
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.backgroundColor = originalColor;
+            button.disabled = false;
+            button.style.cursor = 'pointer';
+        }, 3000);
+    });
+}
 </script>

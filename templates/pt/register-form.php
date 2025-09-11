@@ -290,49 +290,49 @@ if (!defined('ABSPATH')) {
                                     Código do País *
                                 </label>
                                 <select id="country_code" name="country_code" class="affiliate-form-control affiliate-country-select affiliate-modern-select" required>
-                                    <option value="">Select Country Code</option>
-                                    <option value="+1">+1 (United States)</option>
-                                    <option value="+44">+44 (United Kingdom)</option>
-                                    <option value="+1">+1 (Canada)</option>
-                                    <option value="+61">+61 (Australia)</option>
-                                    <option value="+49">+49 (Germany)</option>
-                                    <option value="+33">+33 (France)</option>
-                                    <option value="+39">+39 (Italy)</option>
-                                    <option value="+34">+34 (Spain)</option>
-                                    <option value="+31">+31 (Netherlands)</option>
-                                    <option value="+32">+32 (Belgium)</option>
-                                    <option value="+41">+41 (Switzerland)</option>
-                                    <option value="+43">+43 (Austria)</option>
-                                    <option value="+46">+46 (Sweden)</option>
-                                    <option value="+47">+47 (Norway)</option>
-                                    <option value="+45">+45 (Denmark)</option>
-                                    <option value="+358">+358 (Finland)</option>
-                                    <option value="+48">+48 (Poland)</option>
-                                    <option value="+420">+420 (Czech Republic)</option>
-                                    <option value="+351">+351 (Portugal)</option>
-                                    <option value="+30">+30 (Greece)</option>
-                                    <option value="+353">+353 (Ireland)</option>
-                                    <option value="+81">+81 (Japan)</option>
-                                    <option value="+82">+82 (South Korea)</option>
-                                    <option value="+86">+86 (China)</option>
-                                    <option value="+91">+91 (India)</option>
-                                    <option value="+65">+65 (Singapore)</option>
-                                    <option value="+60">+60 (Malaysia)</option>
-                                    <option value="+66">+66 (Thailand)</option>
-                                    <option value="+63">+63 (Philippines)</option>
-                                    <option value="+62">+62 (Indonesia)</option>
-                                    <option value="+84">+84 (Vietnam)</option>
-                                    <option value="+64">+64 (New Zealand)</option>
-                                    <option value="+27">+27 (South Africa)</option>
-                                    <option value="+55">+55 (Brazil)</option>
-                                    <option value="+54">+54 (Argentina)</option>
-                                    <option value="+56">+56 (Chile)</option>
-                                    <option value="+52">+52 (Mexico)</option>
-                                    <option value="+90">+90 (Turkey)</option>
-                                    <option value="+972">+972 (Israel)</option>
-                                    <option value="+971">+971 (United Arab Emirates)</option>
-                                    <option value="+966">+966 (Saudi Arabia)</option>
-                                    <option value="+20">+20 (Egypt)</option>
+                                    <option value="">Selecionar Código do País</option>
+                                    <option value="+54">Argentina (+54)</option>
+                                    <option value="+61">Austrália (+61)</option>
+                                    <option value="+43">Áustria (+43)</option>
+                                    <option value="+32">Bélgica (+32)</option>
+                                    <option value="+55">Brasil (+55)</option>
+                                    <option value="+1">Canadá (+1)</option>
+                                    <option value="+56">Chile (+56)</option>
+                                    <option value="+86">China (+86)</option>
+                                    <option value="+45">Dinamarca (+45)</option>
+                                    <option value="+20">Egito (+20)</option>
+                                    <option value="+34">Espanha (+34)</option>
+                                    <option value="+1">Estados Unidos (+1)</option>
+                                    <option value="+63">Filipinas (+63)</option>
+                                    <option value="+358">Finlândia (+358)</option>
+                                    <option value="+33">França (+33)</option>
+                                    <option value="+49">Alemanha (+49)</option>
+                                    <option value="+30">Grécia (+30)</option>
+                                    <option value="+31">Holanda (+31)</option>
+                                    <option value="+91">Índia (+91)</option>
+                                    <option value="+62">Indonésia (+62)</option>
+                                    <option value="+353">Irlanda (+353)</option>
+                                    <option value="+972">Israel (+972)</option>
+                                    <option value="+39">Itália (+39)</option>
+                                    <option value="+81">Japão (+81)</option>
+                                    <option value="+60">Malásia (+60)</option>
+                                    <option value="+52">México (+52)</option>
+                                    <option value="+64">Nova Zelândia (+64)</option>
+                                    <option value="+47">Noruega (+47)</option>
+                                    <option value="+48">Polônia (+48)</option>
+                                    <option value="+351">Portugal (+351)</option>
+                                    <option value="+44">Reino Unido (+44)</option>
+                                    <option value="+420">República Tcheca (+420)</option>
+                                    <option value="+966">Arábia Saudita (+966)</option>
+                                    <option value="+65">Singapura (+65)</option>
+                                    <option value="+27">África do Sul (+27)</option>
+                                    <option value="+82">Coreia do Sul (+82)</option>
+                                    <option value="+46">Suécia (+46)</option>
+                                    <option value="+41">Suíça (+41)</option>
+                                    <option value="+66">Tailândia (+66)</option>
+                                    <option value="+90">Turquia (+90)</option>
+                                    <option value="+971">Emirados Árabes Unidos (+971)</option>
+                                    <option value="+84">Vietnã (+84)</option>
                                 </select>
                             </div>
                             <div class="affiliate-form-group affiliate-col-md-8">
@@ -401,48 +401,48 @@ if (!defined('ABSPATH')) {
                                 </label>
                                 <select id="country" name="country" class="affiliate-form-control affiliate-country-select affiliate-modern-select" required>
                                     <option value="">Select Country</option>
-                                    <option value="United States" data-country-id="1">United States</option>
-                                    <option value="United Kingdom" data-country-id="2">United Kingdom</option>
-                                    <option value="Canada" data-country-id="3">Canada</option>
-                                    <option value="Australia" data-country-id="4">Australia</option>
-                                    <option value="Germany" data-country-id="5">Germany</option>
-                                    <option value="France" data-country-id="6">France</option>
-                                    <option value="Italy" data-country-id="7">Italy</option>
-                                    <option value="Spain" data-country-id="8">Spain</option>
-                                    <option value="Netherlands" data-country-id="9">Netherlands</option>
-                                    <option value="Belgium" data-country-id="10">Belgium</option>
-                                    <option value="Switzerland" data-country-id="11">Switzerland</option>
-                                    <option value="Austria" data-country-id="12">Austria</option>
-                                    <option value="Sweden" data-country-id="13">Sweden</option>
-                                    <option value="Norway" data-country-id="14">Norway</option>
-                                    <option value="Denmark" data-country-id="15">Denmark</option>
-                                    <option value="Finland" data-country-id="16">Finland</option>
-                                    <option value="Poland" data-country-id="17">Poland</option>
-                                    <option value="Czech Republic" data-country-id="18">Czech Republic</option>
-                                    <option value="Portugal" data-country-id="19">Portugal</option>
-                                    <option value="Greece" data-country-id="20">Greece</option>
-                                    <option value="Ireland" data-country-id="21">Ireland</option>
-                                    <option value="Japan" data-country-id="22">Japan</option>
-                                    <option value="South Korea" data-country-id="23">South Korea</option>
-                                    <option value="China" data-country-id="24">China</option>
-                                    <option value="India" data-country-id="25">India</option>
-                                    <option value="Singapore" data-country-id="26">Singapore</option>
-                                    <option value="Malaysia" data-country-id="27">Malaysia</option>
-                                    <option value="Thailand" data-country-id="28">Thailand</option>
-                                    <option value="Philippines" data-country-id="29">Philippines</option>
-                                    <option value="Indonesia" data-country-id="30">Indonesia</option>
-                                    <option value="Vietnam" data-country-id="31">Vietnam</option>
-                                    <option value="New Zealand" data-country-id="32">New Zealand</option>
-                                    <option value="South Africa" data-country-id="33">South Africa</option>
-                                    <option value="Brazil" data-country-id="34">Brazil</option>
                                     <option value="Argentina" data-country-id="35">Argentina</option>
+                                    <option value="Australia" data-country-id="4">Australia</option>
+                                    <option value="Austria" data-country-id="12">Austria</option>
+                                    <option value="Belgium" data-country-id="10">Belgium</option>
+                                    <option value="Brazil" data-country-id="34">Brazil</option>
+                                    <option value="Canada" data-country-id="3">Canada</option>
                                     <option value="Chile" data-country-id="36">Chile</option>
-                                    <option value="Mexico" data-country-id="37">Mexico</option>
-                                    <option value="Turkey" data-country-id="38">Turkey</option>
-                                    <option value="Israel" data-country-id="39">Israel</option>
-                                    <option value="United Arab Emirates" data-country-id="40">United Arab Emirates</option>
-                                    <option value="Saudi Arabia" data-country-id="41">Saudi Arabia</option>
+                                    <option value="China" data-country-id="24">China</option>
+                                    <option value="Czech Republic" data-country-id="18">Czech Republic</option>
+                                    <option value="Denmark" data-country-id="15">Denmark</option>
                                     <option value="Egypt" data-country-id="42">Egypt</option>
+                                    <option value="Finland" data-country-id="16">Finland</option>
+                                    <option value="France" data-country-id="6">France</option>
+                                    <option value="Germany" data-country-id="5">Germany</option>
+                                    <option value="Greece" data-country-id="20">Greece</option>
+                                    <option value="India" data-country-id="25">India</option>
+                                    <option value="Indonesia" data-country-id="30">Indonesia</option>
+                                    <option value="Ireland" data-country-id="21">Ireland</option>
+                                    <option value="Israel" data-country-id="39">Israel</option>
+                                    <option value="Italy" data-country-id="7">Italy</option>
+                                    <option value="Japan" data-country-id="22">Japan</option>
+                                    <option value="Malaysia" data-country-id="27">Malaysia</option>
+                                    <option value="Mexico" data-country-id="37">Mexico</option>
+                                    <option value="Netherlands" data-country-id="9">Netherlands</option>
+                                    <option value="New Zealand" data-country-id="32">New Zealand</option>
+                                    <option value="Norway" data-country-id="14">Norway</option>
+                                    <option value="Philippines" data-country-id="29">Philippines</option>
+                                    <option value="Poland" data-country-id="17">Poland</option>
+                                    <option value="Portugal" data-country-id="19">Portugal</option>
+                                    <option value="Saudi Arabia" data-country-id="41">Saudi Arabia</option>
+                                    <option value="Singapore" data-country-id="26">Singapore</option>
+                                    <option value="South Africa" data-country-id="33">South Africa</option>
+                                    <option value="South Korea" data-country-id="23">South Korea</option>
+                                    <option value="Spain" data-country-id="8">Spain</option>
+                                    <option value="Sweden" data-country-id="13">Sweden</option>
+                                    <option value="Switzerland" data-country-id="11">Switzerland</option>
+                                    <option value="Thailand" data-country-id="28">Thailand</option>
+                                    <option value="Turkey" data-country-id="38">Turkey</option>
+                                    <option value="United Arab Emirates" data-country-id="40">United Arab Emirates</option>
+                                    <option value="United Kingdom" data-country-id="2">United Kingdom</option>
+                                    <option value="United States" data-country-id="1">United States</option>
+                                    <option value="Vietnam" data-country-id="31">Vietnam</option>
                                 </select>
                             </div>
                             <div class="affiliate-form-group affiliate-col-md-6">
@@ -511,10 +511,6 @@ if (!defined('ABSPATH')) {
                                 <option value="">Selecionar moeda</option>
                                 <option value="USD">USD - Dólar Americano</option>
                                 <option value="EUR">EUR - Euro</option>
-                                <option value="GBP">GBP - Libra Esterlina</option>
-                                <option value="CAD">CAD - Dólar Canadense</option>
-                                <option value="AUD">AUD - Dólar Australiano</option>
-                                <option value="INR">INR - Rupia Indiana</option>
                                 <option value="BRL">BRL - Real Brasileiro</option>
                             </select>
                         </div>
